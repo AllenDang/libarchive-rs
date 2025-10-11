@@ -1,0 +1,7 @@
+[package]
+name = "libarchive2"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+libarchive2-sys = { path = "libarchive2-sys" }
