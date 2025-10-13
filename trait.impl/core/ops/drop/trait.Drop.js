@@ -1,0 +1,9 @@
+(function() {
+    var implementors = Object.fromEntries([["libarchive2",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.90.0/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"libarchive2/struct.ArchiveMatch.html\" title=\"struct libarchive2::ArchiveMatch\">ArchiveMatch</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.90.0/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"libarchive2/struct.EntryMut.html\" title=\"struct libarchive2::EntryMut\">EntryMut</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.90.0/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"libarchive2/struct.ReadDisk.html\" title=\"struct libarchive2::ReadDisk\">ReadDisk</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.90.0/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"libarchive2/struct.WriteDisk.html\" title=\"struct libarchive2::WriteDisk\">WriteDisk</a>"],["impl&lt;'a&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/1.90.0/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"libarchive2/struct.ReadArchive.html\" title=\"struct libarchive2::ReadArchive\">ReadArchive</a>&lt;'a&gt;"],["impl&lt;'a&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/1.90.0/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"libarchive2/struct.WriteArchive.html\" title=\"struct libarchive2::WriteArchive\">WriteArchive</a>&lt;'a&gt;"]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":57,"fragment_lengths":[1683]}
