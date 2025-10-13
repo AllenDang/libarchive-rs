@@ -145,14 +145,14 @@ fn build_libarchive() {
         // Cross-compiling to Windows from another platform
 
         // Set environment variables to point to MinGW cross-compiler to avoid "tool not found" warnings
-        if let Ok(mingw_gcc) = which::which("x86_64-w64-mingw32-gcc") {
-            if let Ok(mingw_gxx) = which::which("x86_64-w64-mingw32-g++") {
-                // SAFETY: Setting environment variables during build script execution is safe
-                // as we're in single-threaded build script context
-                unsafe {
-                    env::set_var(format!("CC_{}", target.replace("-", "_")), &mingw_gcc);
-                    env::set_var(format!("CXX_{}", target.replace("-", "_")), &mingw_gxx);
-                }
+        if let Ok(mingw_gcc) = which::which("x86_64-w64-mingw32-gcc")
+            && let Ok(mingw_gxx) = which::which("x86_64-w64-mingw32-g++")
+        {
+            // SAFETY: Setting environment variables during build script execution is safe
+            // as we're in single-threaded build script context
+            unsafe {
+                env::set_var(format!("CC_{}", target.replace("-", "_")), &mingw_gcc);
+                env::set_var(format!("CXX_{}", target.replace("-", "_")), &mingw_gxx);
             }
         }
 
@@ -181,8 +181,8 @@ fn build_libarchive() {
         // Native Windows build (not cross-compiling)
         // Use vcpkg toolchain file if available
         if let Ok(vcpkg_root) = env::var("VCPKG_INSTALLATION_ROOT") {
-            let toolchain_file = PathBuf::from(&vcpkg_root)
-                .join("scripts/buildsystems/vcpkg.cmake");
+            let toolchain_file =
+                PathBuf::from(&vcpkg_root).join("scripts/buildsystems/vcpkg.cmake");
             if toolchain_file.exists() {
                 config.define("CMAKE_TOOLCHAIN_FILE", toolchain_file.to_str().unwrap());
             }
@@ -371,12 +371,12 @@ fn generate_bindings() {
             if let Ok(real_path) = std::fs::canonicalize(&mingw_gcc) {
                 // Path structure: /opt/homebrew/Cellar/mingw-w64/VERSION/toolchain-x86_64/bin/x86_64-w64-mingw32-gcc
                 // We need: /opt/homebrew/Cellar/mingw-w64/VERSION/toolchain-x86_64/x86_64-w64-mingw32/include
-                if let Some(bin_dir) = real_path.parent() {
-                    if let Some(toolchain_dir) = bin_dir.parent() {
-                        let mingw_include = toolchain_dir.join("x86_64-w64-mingw32/include");
-                        if mingw_include.exists() {
-                            builder = builder.clang_arg(format!("-I{}", mingw_include.display()));
-                        }
+                if let Some(bin_dir) = real_path.parent()
+                    && let Some(toolchain_dir) = bin_dir.parent()
+                {
+                    let mingw_include = toolchain_dir.join("x86_64-w64-mingw32/include");
+                    if mingw_include.exists() {
+                        builder = builder.clang_arg(format!("-I{}", mingw_include.display()));
                     }
                 }
             }
@@ -444,13 +444,13 @@ fn generate_bindings() {
                         .and_then(|p| p.parent())
                         .map(|p| p.join("x86_64-unknown-linux-gnu/sysroot"));
 
-                    if let Some(sysroot) = sysroot {
-                        if sysroot.exists() {
-                            builder = builder
-                                .clang_arg(format!("--sysroot={}", sysroot.display()))
-                                .clang_arg(format!("-I{}/usr/include", sysroot.display()));
-                            break;
-                        }
+                    if let Some(sysroot) = sysroot
+                        && sysroot.exists()
+                    {
+                        builder = builder
+                            .clang_arg(format!("--sysroot={}", sysroot.display()))
+                            .clang_arg(format!("-I{}/usr/include", sysroot.display()));
+                        break;
                     }
                 }
             }
