@@ -679,37 +679,17 @@ impl EntryMut {
     }
 
     /// Set the device major number
-    ///
-    /// Returns an error if major > i32::MAX to prevent silent truncation.
-    pub fn set_devmajor(&mut self, major: u64) -> Result<()> {
-        if major > i32::MAX as u64 {
-            return Err(Error::InvalidArgument(format!(
-                "Device major number {} exceeds maximum {}",
-                major,
-                i32::MAX
-            )));
-        }
+    pub fn set_devmajor(&mut self, major: u64) {
         unsafe {
-            libarchive2_sys::archive_entry_set_devmajor(self.entry, major as i32);
+            libarchive2_sys::archive_entry_set_devmajor(self.entry, major as _);
         }
-        Ok(())
     }
 
     /// Set the device minor number
-    ///
-    /// Returns an error if minor > i32::MAX to prevent silent truncation.
-    pub fn set_devminor(&mut self, minor: u64) -> Result<()> {
-        if minor > i32::MAX as u64 {
-            return Err(Error::InvalidArgument(format!(
-                "Device minor number {} exceeds maximum {}",
-                minor,
-                i32::MAX
-            )));
-        }
+    pub fn set_devminor(&mut self, minor: u64) {
         unsafe {
-            libarchive2_sys::archive_entry_set_devminor(self.entry, minor as i32);
+            libarchive2_sys::archive_entry_set_devminor(self.entry, minor as _);
         }
-        Ok(())
     }
 
     /// Set the inode number
@@ -727,54 +707,24 @@ impl EntryMut {
     }
 
     /// Set the device ID
-    ///
-    /// Returns an error if rdev > i32::MAX to prevent silent truncation.
-    pub fn set_rdev(&mut self, rdev: u64) -> Result<()> {
-        if rdev > i32::MAX as u64 {
-            return Err(Error::InvalidArgument(format!(
-                "Device ID {} exceeds maximum {}",
-                rdev,
-                i32::MAX
-            )));
-        }
+    pub fn set_rdev(&mut self, rdev: u64) {
         unsafe {
-            libarchive2_sys::archive_entry_set_rdev(self.entry, rdev as i32);
+            libarchive2_sys::archive_entry_set_rdev(self.entry, rdev as _);
         }
-        Ok(())
     }
 
     /// Set the major device number
-    ///
-    /// Returns an error if major > i32::MAX to prevent silent truncation.
-    pub fn set_rdevmajor(&mut self, major: u64) -> Result<()> {
-        if major > i32::MAX as u64 {
-            return Err(Error::InvalidArgument(format!(
-                "Device major number {} exceeds maximum {}",
-                major,
-                i32::MAX
-            )));
-        }
+    pub fn set_rdevmajor(&mut self, major: u64) {
         unsafe {
-            libarchive2_sys::archive_entry_set_rdevmajor(self.entry, major as i32);
+            libarchive2_sys::archive_entry_set_rdevmajor(self.entry, major as _);
         }
-        Ok(())
     }
 
     /// Set the minor device number
-    ///
-    /// Returns an error if minor > i32::MAX to prevent silent truncation.
-    pub fn set_rdevminor(&mut self, minor: u64) -> Result<()> {
-        if minor > i32::MAX as u64 {
-            return Err(Error::InvalidArgument(format!(
-                "Device minor number {} exceeds maximum {}",
-                minor,
-                i32::MAX
-            )));
-        }
+    pub fn set_rdevminor(&mut self, minor: u64) {
         unsafe {
-            libarchive2_sys::archive_entry_set_rdevminor(self.entry, minor as i32);
+            libarchive2_sys::archive_entry_set_rdevminor(self.entry, minor as _);
         }
-        Ok(())
     }
 
     /// Set file flags (BSD-style)
