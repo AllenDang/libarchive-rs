@@ -2,7 +2,7 @@
 
 use crate::entry::{EntryMut, FileType};
 use crate::error::{Error, Result};
-use crate::format::{ArchiveFormat, CompressionFormat};
+use crate::format::{ArchiveFormat, CompressionFormat, FilterOption, FormatOption};
 use std::ffi::CString;
 use std::path::Path;
 use std::time::SystemTime;
@@ -22,6 +22,8 @@ pub struct WriteArchive<'a> {
     format: Option<ArchiveFormat>,
     compression: Option<CompressionFormat>,
     passphrase: Option<String>,
+    format_options: Vec<FormatOption>,
+    filter_options: Vec<FilterOption>,
     _callback_data: Option<(*mut std::ffi::c_void, crate::callbacks::DropFn)>,
     _phantom: std::marker::PhantomData<&'a mut [u8]>,
 }
@@ -50,6 +52,8 @@ impl<'a> WriteArchive<'a> {
             format: None,
             compression: None,
             passphrase: None,
+            format_options: Vec::new(),
+            filter_options: Vec::new(),
             _callback_data: None,
             _phantom: std::marker::PhantomData,
         }
@@ -87,28 +91,45 @@ impl<'a> WriteArchive<'a> {
 
     /// Set a format-specific option
     ///
-    /// **Note**: This method is not yet implemented. Options will be added in a future version.
-    /// For now, you can use libarchive's default settings for each format.
+    /// This allows fine-grained control over format-specific behavior such as
+    /// compression levels, metadata, or format features.
     ///
     /// # Examples
     ///
     /// ```no_run
-    /// use libarchive2::{WriteArchive, ArchiveFormat};
+    /// use libarchive2::{WriteArchive, ArchiveFormat, FormatOption, CompressionLevel, ZipCompressionMethod};
     ///
-    /// // Set ZIP compression method to deflate (not yet supported)
-    /// // let mut archive = WriteArchive::new()
-    /// //     .format(ArchiveFormat::Zip)
-    /// //     .option("zip:compression", "deflate")
-    /// //     .open_file("output.zip")?;
-    /// # // Ok::<(), Box<dyn std::error::Error>>(())
+    /// let mut archive = WriteArchive::new()
+    ///     .format(ArchiveFormat::Zip)
+    ///     .format_option(FormatOption::ZipCompressionLevel(CompressionLevel::BEST))
+    ///     .format_option(FormatOption::ZipCompressionMethod(ZipCompressionMethod::Deflate))
+    ///     .open_file("output.zip")?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
-    #[deprecated(
-        note = "Not yet implemented. Options will be added in a future version. This method currently has no effect."
-    )]
-    #[allow(unused_variables)]
-    pub fn option<K: Into<String>, V: Into<String>>(self, key: K, value: V) -> Self {
-        // Note: Options are currently ignored. This is a placeholder for future implementation.
-        // Users will receive a deprecation warning when calling this method.
+    pub fn format_option(mut self, option: FormatOption) -> Self {
+        self.format_options.push(option);
+        self
+    }
+
+    /// Set a filter/compression-specific option
+    ///
+    /// This allows fine-grained control over compression behavior such as
+    /// compression levels for different compression formats.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use libarchive2::{WriteArchive, ArchiveFormat, CompressionFormat, FilterOption, CompressionLevel};
+    ///
+    /// let mut archive = WriteArchive::new()
+    ///     .format(ArchiveFormat::TarPax)
+    ///     .compression(CompressionFormat::Gzip)
+    ///     .filter_option(FilterOption::GzipCompressionLevel(CompressionLevel::BEST))
+    ///     .open_file("output.tar.gz")?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn filter_option(mut self, option: FilterOption) -> Self {
+        self.filter_options.push(option);
         self
     }
 
@@ -512,6 +533,211 @@ impl<'a> WriteArchive<'a> {
                 )?;
             }
 
+            // Apply format options
+            for option in &self.format_options {
+                self.apply_format_option(option)?;
+            }
+
+            // Apply filter options
+            for option in &self.filter_options {
+                self.apply_filter_option(option)?;
+            }
+
+            Ok(())
+        }
+    }
+
+    /// Apply a format-specific option (internal helper)
+    fn apply_format_option(&self, option: &FormatOption) -> Result<()> {
+        use crate::format::ZipCompressionMethod;
+
+        unsafe {
+            match option {
+                FormatOption::ZipCompressionMethod(method) => {
+                    let method_str = match method {
+                        ZipCompressionMethod::Store => CString::new("store").unwrap(),
+                        ZipCompressionMethod::Deflate => CString::new("deflate").unwrap(),
+                    };
+                    let module = CString::new("zip").unwrap();
+                    let key = CString::new("compression").unwrap();
+                    Error::from_return_code(
+                        libarchive2_sys::archive_write_set_format_option(
+                            self.archive,
+                            module.as_ptr(),
+                            key.as_ptr(),
+                            method_str.as_ptr(),
+                        ),
+                        self.archive,
+                    )?;
+                }
+                FormatOption::ZipCompressionLevel(level) => {
+                    let level_str = CString::new(level.value().to_string()).unwrap();
+                    let module = CString::new("zip").unwrap();
+                    let key = CString::new("compression-level").unwrap();
+                    Error::from_return_code(
+                        libarchive2_sys::archive_write_set_format_option(
+                            self.archive,
+                            module.as_ptr(),
+                            key.as_ptr(),
+                            level_str.as_ptr(),
+                        ),
+                        self.archive,
+                    )?;
+                }
+                FormatOption::Iso9660VolumeId(volume_id) => {
+                    let vol_id = CString::new(volume_id.as_str()).map_err(|_| {
+                        Error::InvalidArgument("Volume ID contains null byte".to_string())
+                    })?;
+                    let module = CString::new("iso9660").unwrap();
+                    let key = CString::new("volume-id").unwrap();
+                    Error::from_return_code(
+                        libarchive2_sys::archive_write_set_format_option(
+                            self.archive,
+                            module.as_ptr(),
+                            key.as_ptr(),
+                            vol_id.as_ptr(),
+                        ),
+                        self.archive,
+                    )?;
+                }
+                FormatOption::Iso9660Publisher(publisher) => {
+                    let pub_str = CString::new(publisher.as_str()).map_err(|_| {
+                        Error::InvalidArgument("Publisher contains null byte".to_string())
+                    })?;
+                    let module = CString::new("iso9660").unwrap();
+                    let key = CString::new("publisher").unwrap();
+                    Error::from_return_code(
+                        libarchive2_sys::archive_write_set_format_option(
+                            self.archive,
+                            module.as_ptr(),
+                            key.as_ptr(),
+                            pub_str.as_ptr(),
+                        ),
+                        self.archive,
+                    )?;
+                }
+                FormatOption::Iso9660AllowLowercase(allow) => {
+                    let val = CString::new(if *allow { "1" } else { "0" }).unwrap();
+                    let module = CString::new("iso9660").unwrap();
+                    let key = CString::new("allow-lowercase").unwrap();
+                    Error::from_return_code(
+                        libarchive2_sys::archive_write_set_format_option(
+                            self.archive,
+                            module.as_ptr(),
+                            key.as_ptr(),
+                            val.as_ptr(),
+                        ),
+                        self.archive,
+                    )?;
+                }
+                FormatOption::TarGnuLongPathnames(enable) => {
+                    let val = CString::new(if *enable { "1" } else { "0" }).unwrap();
+                    let module = CString::new("gnutar").unwrap();
+                    let key = CString::new("longname").unwrap();
+                    Error::from_return_code(
+                        libarchive2_sys::archive_write_set_format_option(
+                            self.archive,
+                            module.as_ptr(),
+                            key.as_ptr(),
+                            val.as_ptr(),
+                        ),
+                        self.archive,
+                    )?;
+                }
+                FormatOption::SevenZipCompressionLevel(level) => {
+                    let level_str = CString::new(level.value().to_string()).unwrap();
+                    let module = CString::new("7zip").unwrap();
+                    let key = CString::new("compression-level").unwrap();
+                    Error::from_return_code(
+                        libarchive2_sys::archive_write_set_format_option(
+                            self.archive,
+                            module.as_ptr(),
+                            key.as_ptr(),
+                            level_str.as_ptr(),
+                        ),
+                        self.archive,
+                    )?;
+                }
+            }
+            Ok(())
+        }
+    }
+
+    /// Apply a filter-specific option (internal helper)
+    fn apply_filter_option(&self, option: &FilterOption) -> Result<()> {
+        unsafe {
+            match option {
+                FilterOption::GzipCompressionLevel(level) => {
+                    let level_str = CString::new(level.value().to_string()).unwrap();
+                    let module = CString::new("gzip").unwrap();
+                    let key = CString::new("compression-level").unwrap();
+                    Error::from_return_code(
+                        libarchive2_sys::archive_write_set_filter_option(
+                            self.archive,
+                            module.as_ptr(),
+                            key.as_ptr(),
+                            level_str.as_ptr(),
+                        ),
+                        self.archive,
+                    )?;
+                }
+                FilterOption::Bzip2CompressionLevel(level) => {
+                    let level_str = CString::new(level.value().to_string()).unwrap();
+                    let module = CString::new("bzip2").unwrap();
+                    let key = CString::new("compression-level").unwrap();
+                    Error::from_return_code(
+                        libarchive2_sys::archive_write_set_filter_option(
+                            self.archive,
+                            module.as_ptr(),
+                            key.as_ptr(),
+                            level_str.as_ptr(),
+                        ),
+                        self.archive,
+                    )?;
+                }
+                FilterOption::XzCompressionLevel(level) => {
+                    let level_str = CString::new(level.value().to_string()).unwrap();
+                    let module = CString::new("xz").unwrap();
+                    let key = CString::new("compression-level").unwrap();
+                    Error::from_return_code(
+                        libarchive2_sys::archive_write_set_filter_option(
+                            self.archive,
+                            module.as_ptr(),
+                            key.as_ptr(),
+                            level_str.as_ptr(),
+                        ),
+                        self.archive,
+                    )?;
+                }
+                FilterOption::ZstdCompressionLevel(level) => {
+                    let level_str = CString::new(level.to_string()).unwrap();
+                    let module = CString::new("zstd").unwrap();
+                    let key = CString::new("compression-level").unwrap();
+                    Error::from_return_code(
+                        libarchive2_sys::archive_write_set_filter_option(
+                            self.archive,
+                            module.as_ptr(),
+                            key.as_ptr(),
+                            level_str.as_ptr(),
+                        ),
+                        self.archive,
+                    )?;
+                }
+                FilterOption::Lz4CompressionLevel(level) => {
+                    let level_str = CString::new(level.value().to_string()).unwrap();
+                    let module = CString::new("lz4").unwrap();
+                    let key = CString::new("compression-level").unwrap();
+                    Error::from_return_code(
+                        libarchive2_sys::archive_write_set_filter_option(
+                            self.archive,
+                            module.as_ptr(),
+                            key.as_ptr(),
+                            level_str.as_ptr(),
+                        ),
+                        self.archive,
+                    )?;
+                }
+            }
             Ok(())
         }
     }
@@ -540,6 +766,77 @@ impl<'a> WriteArchive<'a> {
                 Err(Error::from_archive(self.archive))
             } else {
                 Ok(ret as usize)
+            }
+        }
+    }
+
+    /// Write a data block at a specific offset
+    ///
+    /// This is useful for sparse files where you want to write data at specific
+    /// offsets, leaving holes (zeros) in between. This method provides fine-grained
+    /// control over data placement within an entry.
+    ///
+    /// # Arguments
+    ///
+    /// * `offset` - Byte offset within the entry where data should be written
+    /// * `data` - Data to write at the specified offset
+    ///
+    /// # Returns
+    ///
+    /// Returns the number of bytes written on success.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use libarchive2::{WriteArchive, ArchiveFormat, EntryMut, FileType};
+    ///
+    /// let mut archive = WriteArchive::new()
+    ///     .format(ArchiveFormat::TarPax)
+    ///     .open_file("sparse.tar")?;
+    ///
+    /// // Create a sparse file with data at specific offsets
+    /// let mut entry = EntryMut::new();
+    /// entry.set_pathname("sparse_file.bin")?;
+    /// entry.set_file_type(FileType::RegularFile);
+    /// entry.set_size(1024 * 1024); // 1MB file
+    /// entry.set_perm(0o644)?;
+    ///
+    /// archive.write_header(&entry)?;
+    ///
+    /// // Write data at offset 0
+    /// archive.write_data_block(0, b"Start of file")?;
+    ///
+    /// // Skip to offset 512KB and write more data (creating a hole)
+    /// archive.write_data_block(512 * 1024, b"Middle of file")?;
+    ///
+    /// // Skip to offset 1MB-100 and write end data
+    /// archive.write_data_block(1024 * 1024 - 100, b"End of file")?;
+    ///
+    /// archive.finish()?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    ///
+    /// # Notes
+    ///
+    /// - The offset determines where in the entry the data will be written
+    /// - Gaps between writes are typically represented as sparse holes (zeros) in the archive
+    /// - Not all archive formats support sparse files (e.g., TAR formats do, but ZIP does not)
+    /// - The entry's size must be set appropriately before writing blocks
+    pub fn write_data_block(&mut self, offset: i64, data: &[u8]) -> Result<usize> {
+        unsafe {
+            let ret = libarchive2_sys::archive_write_data_block(
+                self.archive,
+                data.as_ptr() as *const std::os::raw::c_void,
+                data.len(),
+                offset,
+            );
+
+            if ret < 0 {
+                Err(Error::from_archive(self.archive))
+            } else {
+                // archive_write_data_block returns ARCHIVE_OK (0) on success
+                // We return the number of bytes written (data.len())
+                Ok(data.len())
             }
         }
     }

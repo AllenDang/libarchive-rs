@@ -127,3 +127,88 @@ pub enum ReadFormat {
     /// Specific format
     Format(ArchiveFormat),
 }
+
+/// ZIP compression method options
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ZipCompressionMethod {
+    /// Store (no compression)
+    Store,
+    /// Deflate compression (default)
+    Deflate,
+}
+
+/// Compression level (0-9)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CompressionLevel(u8);
+
+impl CompressionLevel {
+    /// Create a new compression level (0-9)
+    ///
+    /// # Panics
+    /// Panics if level > 9
+    pub fn new(level: u8) -> Self {
+        assert!(level <= 9, "Compression level must be 0-9");
+        CompressionLevel(level)
+    }
+
+    /// No compression (level 0)
+    pub const NONE: Self = CompressionLevel(0);
+
+    /// Fastest compression (level 1)
+    pub const FASTEST: Self = CompressionLevel(1);
+
+    /// Default/balanced compression (level 6)
+    pub const DEFAULT: Self = CompressionLevel(6);
+
+    /// Best compression (level 9)
+    pub const BEST: Self = CompressionLevel(9);
+
+    /// Get the numeric level value
+    pub fn value(&self) -> u8 {
+        self.0
+    }
+}
+
+/// Format-specific options for archive writing
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FormatOption {
+    /// ZIP: Set compression method
+    ZipCompressionMethod(ZipCompressionMethod),
+
+    /// ZIP: Set compression level (0-9)
+    ZipCompressionLevel(CompressionLevel),
+
+    /// ISO9660: Set volume ID
+    Iso9660VolumeId(String),
+
+    /// ISO9660: Set publisher
+    Iso9660Publisher(String),
+
+    /// ISO9660: Allow lowercase filenames
+    Iso9660AllowLowercase(bool),
+
+    /// TAR: Use GNU extensions for long pathnames
+    TarGnuLongPathnames(bool),
+
+    /// 7z: Set compression level (0-9)
+    SevenZipCompressionLevel(CompressionLevel),
+}
+
+/// Filter-specific options for compression
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FilterOption {
+    /// Gzip: Set compression level (0-9)
+    GzipCompressionLevel(CompressionLevel),
+
+    /// Bzip2: Set compression level (0-9)
+    Bzip2CompressionLevel(CompressionLevel),
+
+    /// XZ: Set compression level (0-9)
+    XzCompressionLevel(CompressionLevel),
+
+    /// Zstd: Set compression level (0-22, but typically 0-9)
+    ZstdCompressionLevel(u8),
+
+    /// LZ4: Set compression level (0-9)
+    Lz4CompressionLevel(CompressionLevel),
+}

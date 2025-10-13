@@ -73,6 +73,76 @@ impl<'a> ReadArchive<'a> {
         Ok(reader)
     }
 
+    /// Open a multi-volume archive from multiple files
+    ///
+    /// This method allows reading archives that are split across multiple files.
+    /// The files will be read in the order provided.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use libarchive2::ReadArchive;
+    ///
+    /// // Read a multi-volume RAR archive split into parts
+    /// let parts = vec!["archive.part1.rar", "archive.part2.rar", "archive.part3.rar"];
+    /// let mut archive = ReadArchive::open_filenames(&parts)?;
+    ///
+    /// while let Some(entry) = archive.next_entry()? {
+    ///     println!("Entry: {}", entry.pathname().unwrap_or_default());
+    ///     // Process entry...
+    /// }
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    ///
+    /// # Notes
+    ///
+    /// - The files must be provided in the correct order
+    /// - All files must remain accessible for the lifetime of the ReadArchive
+    /// - This is commonly used for RAR archives split into multiple parts
+    pub fn open_filenames<P: AsRef<Path>>(paths: &[P]) -> Result<Self> {
+        // Validate that at least one path is provided
+        if paths.is_empty() {
+            return Err(Error::InvalidArgument(
+                "At least one file path must be provided".to_string(),
+            ));
+        }
+
+        let mut reader = Self::new()?;
+        reader.support_filter_all()?;
+        reader.support_format_all()?;
+
+        // Convert paths to C strings and collect them
+        let c_paths: Result<Vec<CString>> = paths
+            .iter()
+            .map(|p| {
+                let path_str = p.as_ref().to_str().ok_or_else(|| {
+                    Error::InvalidArgument("Path contains invalid UTF-8".to_string())
+                })?;
+                CString::new(path_str)
+                    .map_err(|_| Error::InvalidArgument("Path contains null byte".to_string()))
+            })
+            .collect();
+        let c_paths = c_paths?;
+
+        // Create null-terminated array of pointers
+        let mut c_path_ptrs: Vec<*const std::os::raw::c_char> =
+            c_paths.iter().map(|s| s.as_ptr()).collect();
+        c_path_ptrs.push(std::ptr::null()); // Null terminator
+
+        unsafe {
+            Error::from_return_code(
+                libarchive2_sys::archive_read_open_filenames(
+                    reader.archive,
+                    c_path_ptrs.as_mut_ptr(),
+                    10240,
+                ),
+                reader.archive,
+            )?;
+        }
+
+        Ok(reader)
+    }
+
     /// Open an archive from memory
     ///
     /// The data must remain valid for the lifetime of the ReadArchive.
@@ -579,6 +649,64 @@ impl<'a> ReadArchive<'a> {
     /// Returns true if you can use read_data_block on this entry.
     pub fn has_data_block(&self) -> bool {
         unsafe { libarchive2_sys::archive_read_has_encrypted_entries(self.archive) > 0 }
+    }
+
+    /// Read the next data block from the current entry
+    ///
+    /// This is useful for sparse files or when you need fine-grained control over
+    /// reading. Returns the offset within the entry and the data block.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Some((offset, data)))` - Next data block with its offset
+    /// - `Ok(None)` - End of entry data
+    /// - `Err(...)` - Error occurred
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use libarchive2::ReadArchive;
+    ///
+    /// let mut archive = ReadArchive::open("sparse.tar")?;
+    /// if let Some(entry) = archive.next_entry()? {
+    ///     // Read blocks with their offsets (useful for sparse files)
+    ///     while let Some((offset, data)) = archive.read_data_block()? {
+    ///         println!("Block at offset {}: {} bytes", offset, data.len());
+    ///         // Write to disk at specific offset if needed
+    ///     }
+    /// }
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn read_data_block(&mut self) -> Result<Option<(i64, Vec<u8>)>> {
+        unsafe {
+            let mut buffer: *const std::os::raw::c_void = std::ptr::null();
+            let mut size: usize = 0;
+            let mut offset: i64 = 0;
+
+            let ret = libarchive2_sys::archive_read_data_block(
+                self.archive,
+                &mut buffer,
+                &mut size,
+                &mut offset,
+            );
+
+            if ret == libarchive2_sys::ARCHIVE_EOF as i32 {
+                return Ok(None);
+            }
+
+            if ret == libarchive2_sys::ARCHIVE_OK as i32 {
+                if size == 0 {
+                    return Ok(None);
+                }
+
+                // SAFETY: libarchive guarantees buffer is valid and contains 'size' bytes
+                // We copy the data to owned Vec to ensure memory safety
+                let data = std::slice::from_raw_parts(buffer as *const u8, size).to_vec();
+                Ok(Some((offset, data)))
+            } else {
+                Err(Error::from_archive(self.archive))
+            }
+        }
     }
 
     /// Extract the current entry to disk

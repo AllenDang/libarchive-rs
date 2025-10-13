@@ -5,3 +5,6 @@ edition = "2024"
 
 [dependencies]
 libarchive2-sys = { path = "libarchive2-sys" }
+
+[dev-dependencies]
+tempfile = "3.8"

@@ -54,7 +54,10 @@ pub use callbacks::{CallbackReader, CallbackWriter, ProgressCallback, ProgressTr
 pub use entry::{Entry, EntryMut, FileType};
 pub use error::{Error, Result};
 pub use extract::{ExtractFlags, WriteDisk};
-pub use format::{ArchiveFormat, CompressionFormat, ReadFormat};
+pub use format::{
+    ArchiveFormat, CompressionFormat, CompressionLevel, FilterOption, FormatOption, ReadFormat,
+    ZipCompressionMethod,
+};
 pub use match_filter::ArchiveMatch;
 pub use read_disk::{ReadDisk, ReadDiskFlags, SymlinkMode};
 pub use reader::ReadArchive;
