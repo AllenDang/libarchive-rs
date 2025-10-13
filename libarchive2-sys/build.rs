@@ -243,6 +243,10 @@ fn build_libarchive() {
         println!("cargo:rustc-link-lib=lzma");
         println!("cargo:rustc-link-lib=zstd");
         println!("cargo:rustc-link-lib=lz4");
+        // Additional libraries for Linux features
+        println!("cargo:rustc-link-lib=xml2");      // For XAR format support
+        println!("cargo:rustc-link-lib=crypto");    // For encryption support (OpenSSL)
+        println!("cargo:rustc-link-lib=acl");       // For POSIX ACL support
     } else if target.contains("windows") {
         // Windows - library names are different
         if target.contains("msvc") {

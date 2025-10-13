@@ -47,12 +47,12 @@ jobs:
         with:
           components: clippy
 
-      # Install libarchive on Linux
-      - name: Install libarchive (Ubuntu)
+      # Install system dependencies on Linux
+      - name: Install dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libarchive-dev
+          sudo apt-get install -y libxml2-dev libssl-dev libacl1-dev liblzma-dev libzstd-dev liblz4-dev libbz2-dev zlib1g-dev cmake
 
       # Install libarchive on macOS
       - name: Install libarchive (macOS)
@@ -119,12 +119,12 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
 
-      # Install libarchive on Linux
-      - name: Install libarchive (Ubuntu)
+      # Install system dependencies on Linux
+      - name: Install dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libarchive-dev
+          sudo apt-get install -y libxml2-dev libssl-dev libacl1-dev liblzma-dev libzstd-dev liblz4-dev libbz2-dev zlib1g-dev cmake
 
       # Install libarchive on macOS
       - name: Install libarchive (macOS)
@@ -181,12 +181,12 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
-      # Install libarchive on Linux
-      - name: Install libarchive (Ubuntu)
+      # Install system dependencies on Linux
+      - name: Install dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libarchive-dev
+          sudo apt-get install -y libxml2-dev libssl-dev libacl1-dev liblzma-dev libzstd-dev liblz4-dev libbz2-dev zlib1g-dev cmake
 
       # Install libarchive on macOS
       - name: Install libarchive (macOS)
@@ -239,10 +239,10 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install libarchive
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libarchive-dev
+          sudo apt-get install -y libxml2-dev libssl-dev libacl1-dev liblzma-dev libzstd-dev liblz4-dev libbz2-dev zlib1g-dev cmake
 
       - name: Check documentation
         run: cargo doc --no-deps --all-features
@@ -282,10 +282,10 @@ jobs:
         with:
           components: llvm-tools-preview
 
-      - name: Install libarchive
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libarchive-dev
+          sudo apt-get install -y libxml2-dev libssl-dev libacl1-dev liblzma-dev libzstd-dev liblz4-dev libbz2-dev zlib1g-dev cmake
 
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov

@@ -89,7 +89,7 @@ jobs:
       - name: Install libarchive
         run: |
           sudo apt-get update
-          sudo apt-get install -y libarchive-dev
+          sudo apt-get install -y libxml2-dev libssl-dev libacl1-dev liblzma-dev libzstd-dev liblz4-dev libbz2-dev zlib1g-dev cmake
 
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov
@@ -125,7 +125,7 @@ jobs:
       - name: Install libarchive
         run: |
           sudo apt-get update
-          sudo apt-get install -y libarchive-dev
+          sudo apt-get install -y libxml2-dev libssl-dev libacl1-dev liblzma-dev libzstd-dev liblz4-dev libbz2-dev zlib1g-dev cmake
 
       - name: Build
         run: cargo build --verbose
