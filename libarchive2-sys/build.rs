@@ -312,6 +312,8 @@ fn build_libarchive() {
             println!("cargo:rustc-link-lib=libcrypto"); // OpenSSL libcrypto for digest functions
             println!("cargo:rustc-link-lib=bcrypt"); // For additional crypto functions
             println!("cargo:rustc-link-lib=advapi32");
+            println!("cargo:rustc-link-lib=xmllite"); // For XAR format XML parsing
+            println!("cargo:rustc-link-lib=ole32"); // For COM stream functions (CreateStreamOnHGlobal, etc.)
         } else {
             // MinGW toolchain
             println!("cargo:rustc-link-lib=z");
@@ -322,6 +324,8 @@ fn build_libarchive() {
             println!("cargo:rustc-link-lib=crypto"); // OpenSSL libcrypto for digest functions
             println!("cargo:rustc-link-lib=bcrypt");
             println!("cargo:rustc-link-lib=advapi32");
+            println!("cargo:rustc-link-lib=xmllite"); // For XAR format XML parsing
+            println!("cargo:rustc-link-lib=ole32"); // For COM stream functions
         }
     } else if target.contains("wasm") {
         // WASM - only zlib is enabled, link via emscripten
