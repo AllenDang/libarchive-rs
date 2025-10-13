@@ -2,8 +2,11 @@
 
 Safe Rust bindings for [libarchive](https://github.com/libarchive/libarchive) v3.8.1, providing cross-platform archive reading and writing capabilities.
 
+[![CI](https://github.com/AllenDang/libarchive-rs/workflows/CI/badge.svg)](https://github.com/AllenDang/libarchive-rs/actions/workflows/ci.yml)
 [![Rust](https://img.shields.io/badge/rust-2024%20edition-orange.svg)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-BSD-blue.svg)](LICENSE)
+[![docs.rs](https://docs.rs/libarchive2/badge.svg)](https://docs.rs/libarchive2)
+[![Crates.io](https://img.shields.io/crates/v/libarchive2.svg)](https://crates.io/crates/libarchive2)
 
 ## Features
 
