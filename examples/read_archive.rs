@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut archive = ReadArchive::open(&path)?;
 
     while let Some(entry) = archive.next_entry()? {
-        let pathname = entry.pathname().unwrap_or("<unknown>");
+        let pathname = entry.pathname().unwrap_or_else(|| "<unknown>".to_string());
         let size = entry.size();
         let file_type = entry.file_type();
 

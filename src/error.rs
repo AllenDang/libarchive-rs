@@ -15,6 +15,8 @@ pub enum Error {
         code: i32,
         /// Error message from libarchive
         message: String,
+        /// System errno if available
+        errno: Option<i32>,
     },
     /// UTF-8 conversion error
     Utf8(std::str::Utf8Error),
@@ -39,7 +41,14 @@ impl Error {
                 CStr::from_ptr(msg_ptr).to_string_lossy().into_owned()
             };
 
-            Error::Archive { code, message }
+            // Capture errno if it's set (non-zero)
+            let errno = if code != 0 { Some(code) } else { None };
+
+            Error::Archive {
+                code,
+                message,
+                errno,
+            }
         }
     }
 
@@ -60,8 +69,16 @@ impl Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Archive { code, message } => {
-                write!(f, "libarchive error (code {}): {}", code, message)
+            Error::Archive {
+                code,
+                message,
+                errno,
+            } => {
+                write!(f, "libarchive error (code {}): {}", code, message)?;
+                if let Some(e) = errno {
+                    write!(f, " [errno: {}]", e)?;
+                }
+                Ok(())
             }
             Error::Utf8(e) => write!(f, "UTF-8 conversion error: {}", e),
             Error::Io(e) => write!(f, "I/O error: {}", e),

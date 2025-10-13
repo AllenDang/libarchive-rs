@@ -33,6 +33,14 @@ pub enum ArchiveFormat {
     Shar,
     /// WARC web archive format
     Warc,
+    /// RAR format (read-only)
+    Rar,
+    /// RAR 5.x format (read-only)
+    Rar5,
+    /// LHA format (read-only)
+    Lha,
+    /// CAB format (read-only)
+    Cab,
 }
 
 /// Compression format types
@@ -83,6 +91,10 @@ impl ArchiveFormat {
             ArchiveFormat::Raw => "bin",
             ArchiveFormat::Shar => "shar",
             ArchiveFormat::Warc => "warc",
+            ArchiveFormat::Rar => "rar",
+            ArchiveFormat::Rar5 => "rar",
+            ArchiveFormat::Lha => "lha",
+            ArchiveFormat::Cab => "cab",
         }
     }
 }

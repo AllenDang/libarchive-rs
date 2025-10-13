@@ -72,6 +72,10 @@ impl FileType {
 }
 
 /// Immutable reference to an archive entry
+///
+/// The lifetime parameter ensures the entry cannot outlive the archive
+/// and that only one entry can be active at a time (enforced through
+/// the mutable borrow of the archive when calling next_entry).
 pub struct Entry<'a> {
     pub(crate) entry: *mut libarchive2_sys::archive_entry,
     pub(crate) _marker: std::marker::PhantomData<&'a ()>,
@@ -79,13 +83,16 @@ pub struct Entry<'a> {
 
 impl<'a> Entry<'a> {
     /// Get the pathname of the entry
-    pub fn pathname(&self) -> Option<&str> {
+    ///
+    /// Returns an owned String to ensure safety, as the underlying C string
+    /// may be invalidated when the entry is modified or freed.
+    pub fn pathname(&self) -> Option<String> {
         unsafe {
             let ptr = libarchive2_sys::archive_entry_pathname_utf8(self.entry);
             if ptr.is_null() {
                 None
             } else {
-                CStr::from_ptr(ptr).to_str().ok()
+                CStr::from_ptr(ptr).to_str().ok().map(|s| s.to_owned())
             }
         }
     }
@@ -144,51 +151,211 @@ impl<'a> Entry<'a> {
     }
 
     /// Get the user name
-    pub fn uname(&self) -> Option<&str> {
+    ///
+    /// Returns an owned String to ensure safety, as the underlying C string
+    /// may be invalidated when the entry is modified or freed.
+    pub fn uname(&self) -> Option<String> {
         unsafe {
             let ptr = libarchive2_sys::archive_entry_uname_utf8(self.entry);
             if ptr.is_null() {
                 None
             } else {
-                CStr::from_ptr(ptr).to_str().ok()
+                CStr::from_ptr(ptr).to_str().ok().map(|s| s.to_owned())
             }
         }
     }
 
     /// Get the group name
-    pub fn gname(&self) -> Option<&str> {
+    ///
+    /// Returns an owned String to ensure safety, as the underlying C string
+    /// may be invalidated when the entry is modified or freed.
+    pub fn gname(&self) -> Option<String> {
         unsafe {
             let ptr = libarchive2_sys::archive_entry_gname_utf8(self.entry);
             if ptr.is_null() {
                 None
             } else {
-                CStr::from_ptr(ptr).to_str().ok()
+                CStr::from_ptr(ptr).to_str().ok().map(|s| s.to_owned())
             }
         }
     }
 
     /// Get the symlink target (for symbolic links)
-    pub fn symlink(&self) -> Option<&str> {
+    ///
+    /// Returns an owned String to ensure safety, as the underlying C string
+    /// may be invalidated when the entry is modified or freed.
+    pub fn symlink(&self) -> Option<String> {
         unsafe {
             let ptr = libarchive2_sys::archive_entry_symlink_utf8(self.entry);
             if ptr.is_null() {
                 None
             } else {
-                CStr::from_ptr(ptr).to_str().ok()
+                CStr::from_ptr(ptr).to_str().ok().map(|s| s.to_owned())
             }
         }
     }
 
     /// Get the hardlink target
-    pub fn hardlink(&self) -> Option<&str> {
+    ///
+    /// Returns an owned String to ensure safety, as the underlying C string
+    /// may be invalidated when the entry is modified or freed.
+    pub fn hardlink(&self) -> Option<String> {
         unsafe {
             let ptr = libarchive2_sys::archive_entry_hardlink_utf8(self.entry);
             if ptr.is_null() {
                 None
             } else {
-                CStr::from_ptr(ptr).to_str().ok()
+                CStr::from_ptr(ptr).to_str().ok().map(|s| s.to_owned())
             }
         }
+    }
+
+    /// Get the access time
+    pub fn atime(&self) -> Option<SystemTime> {
+        unsafe {
+            let sec = libarchive2_sys::archive_entry_atime(self.entry);
+            let nsec = libarchive2_sys::archive_entry_atime_nsec(self.entry);
+            if sec >= 0 {
+                Some(SystemTime::UNIX_EPOCH + std::time::Duration::new(sec as u64, nsec as u32))
+            } else {
+                None
+            }
+        }
+    }
+
+    /// Get the creation time (birth time)
+    ///
+    /// Note: Not all archive formats and filesystems support birth time.
+    pub fn birthtime(&self) -> Option<SystemTime> {
+        unsafe {
+            let sec = libarchive2_sys::archive_entry_birthtime(self.entry);
+            let nsec = libarchive2_sys::archive_entry_birthtime_nsec(self.entry);
+            if sec >= 0 {
+                Some(SystemTime::UNIX_EPOCH + std::time::Duration::new(sec as u64, nsec as u32))
+            } else {
+                None
+            }
+        }
+    }
+
+    /// Get the status change time
+    pub fn ctime(&self) -> Option<SystemTime> {
+        unsafe {
+            let sec = libarchive2_sys::archive_entry_ctime(self.entry);
+            let nsec = libarchive2_sys::archive_entry_ctime_nsec(self.entry);
+            if sec >= 0 {
+                Some(SystemTime::UNIX_EPOCH + std::time::Duration::new(sec as u64, nsec as u32))
+            } else {
+                None
+            }
+        }
+    }
+
+    /// Get the device number (for block and character devices)
+    pub fn dev(&self) -> Option<u64> {
+        unsafe {
+            if libarchive2_sys::archive_entry_dev_is_set(self.entry) != 0 {
+                Some(libarchive2_sys::archive_entry_dev(self.entry) as u64)
+            } else {
+                None
+            }
+        }
+    }
+
+    /// Get the device major number
+    ///
+    /// Returns the device major number. For entries without a device,
+    /// this may return 0 or an undefined value.
+    pub fn devmajor(&self) -> u64 {
+        unsafe { libarchive2_sys::archive_entry_devmajor(self.entry) as u64 }
+    }
+
+    /// Get the device minor number
+    ///
+    /// Returns the device minor number. For entries without a device,
+    /// this may return 0 or an undefined value.
+    pub fn devminor(&self) -> u64 {
+        unsafe { libarchive2_sys::archive_entry_devminor(self.entry) as u64 }
+    }
+
+    /// Get the inode number
+    ///
+    /// Returns the inode number. If not set, returns 0.
+    pub fn ino(&self) -> u64 {
+        unsafe { libarchive2_sys::archive_entry_ino64(self.entry) as u64 }
+    }
+
+    /// Get the number of hard links
+    ///
+    /// Returns the number of hard links. If not set, returns 0.
+    pub fn nlink(&self) -> u32 {
+        unsafe { libarchive2_sys::archive_entry_nlink(self.entry) as u32 }
+    }
+
+    /// Get the device ID (for the filesystem containing the file)
+    ///
+    /// Returns the device ID. For entries without a device,
+    /// this may return 0 or an undefined value.
+    pub fn rdev(&self) -> u64 {
+        unsafe { libarchive2_sys::archive_entry_rdev(self.entry) as u64 }
+    }
+
+    /// Get the major device number (for the filesystem containing the file)
+    ///
+    /// Returns the major device number. For entries without a device,
+    /// this may return 0 or an undefined value.
+    pub fn rdevmajor(&self) -> u64 {
+        unsafe { libarchive2_sys::archive_entry_rdevmajor(self.entry) as u64 }
+    }
+
+    /// Get the minor device number (for the filesystem containing the file)
+    ///
+    /// Returns the minor device number. For entries without a device,
+    /// this may return 0 or an undefined value.
+    pub fn rdevminor(&self) -> u64 {
+        unsafe { libarchive2_sys::archive_entry_rdevminor(self.entry) as u64 }
+    }
+
+    /// Get file flags (BSD-style file flags)
+    ///
+    /// Returns a tuple of (set flags, clear flags)
+    pub fn fflags(&self) -> Option<(u64, u64)> {
+        unsafe {
+            let mut set: std::os::raw::c_ulong = 0;
+            let mut clear: std::os::raw::c_ulong = 0;
+            libarchive2_sys::archive_entry_fflags(self.entry, &mut set, &mut clear);
+            Some((set as u64, clear as u64))
+        }
+    }
+
+    /// Get file flags as a text string
+    ///
+    /// Returns an owned String to ensure safety, as the underlying C string
+    /// may be invalidated when the entry is modified or freed.
+    pub fn fflags_text(&self) -> Option<String> {
+        unsafe {
+            let ptr = libarchive2_sys::archive_entry_fflags_text(self.entry);
+            if ptr.is_null() {
+                None
+            } else {
+                CStr::from_ptr(ptr).to_str().ok().map(|s| s.to_owned())
+            }
+        }
+    }
+
+    /// Check if entry is encrypted
+    pub fn is_encrypted(&self) -> bool {
+        unsafe { libarchive2_sys::archive_entry_is_encrypted(self.entry) != 0 }
+    }
+
+    /// Check if entry data is encrypted
+    pub fn is_data_encrypted(&self) -> bool {
+        unsafe { libarchive2_sys::archive_entry_is_data_encrypted(self.entry) != 0 }
+    }
+
+    /// Check if entry metadata is encrypted
+    pub fn is_metadata_encrypted(&self) -> bool {
+        unsafe { libarchive2_sys::archive_entry_is_metadata_encrypted(self.entry) != 0 }
     }
 }
 
@@ -224,6 +391,7 @@ impl EntryMut {
 
     /// Set the file type
     pub fn set_file_type(&mut self, file_type: FileType) {
+        // SAFETY: entry is a valid pointer and file_type.to_mode() returns a valid mode value
         unsafe {
             libarchive2_sys::archive_entry_set_filetype(self.entry, file_type.to_mode());
         }
@@ -231,34 +399,77 @@ impl EntryMut {
 
     /// Set the file size
     pub fn set_size(&mut self, size: i64) {
+        // SAFETY: entry is a valid pointer
         unsafe {
             libarchive2_sys::archive_entry_set_size(self.entry, size);
         }
     }
 
     /// Set the file permissions
-    pub fn set_perm(&mut self, perm: u32) {
+    ///
+    /// On platforms where permissions are stored as u16 (macOS, Windows, BSD),
+    /// this will return an error if perm > 0xFFFF. Standard Unix permissions
+    /// (0o777) are always safe on all platforms.
+    ///
+    /// # Platform Notes
+    ///
+    /// The underlying `mode_t` type varies by platform:
+    /// - Linux (64-bit): u32
+    /// - macOS/BSD/Windows: u16
+    /// - Android: varies by architecture (u32 on 64-bit, u16 on 32-bit)
+    pub fn set_perm(&mut self, perm: u32) -> Result<()> {
         unsafe {
-            // Linux (x86_64, aarch64) and Android (x86_64, aarch64) use u32
-            // macOS/Windows/iOS and Android (armv7, x86) use u16
+            // Note: This platform detection is conservative. It assumes u32 on 64-bit Linux/Android
+            // and u16 elsewhere. The libarchive2-sys crate should ideally provide type information
+            // from its build script to make this more accurate.
+
+            // Platforms with 32-bit mode_t: Linux and Android on 64-bit architectures
             #[cfg(all(
                 any(target_os = "linux", target_os = "android"),
-                any(target_arch = "x86_64", target_arch = "aarch64")
+                any(
+                    target_arch = "x86_64",
+                    target_arch = "aarch64",
+                    target_arch = "loongarch64",
+                    target_arch = "riscv64"
+                )
             ))]
             {
                 libarchive2_sys::archive_entry_set_perm(self.entry, perm);
             }
+
+            // All other platforms (macOS, BSD, Windows, 32-bit architectures) use 16-bit mode_t
             #[cfg(not(all(
                 any(target_os = "linux", target_os = "android"),
-                any(target_arch = "x86_64", target_arch = "aarch64")
+                any(
+                    target_arch = "x86_64",
+                    target_arch = "aarch64",
+                    target_arch = "loongarch64",
+                    target_arch = "riscv64"
+                )
             )))]
             {
+                // SAFETY: We check that the value fits in u16 to prevent silent truncation
+                // Standard Unix permissions (0o777 = 0x1FF) always fit in u16
+                if perm > 0xFFFF {
+                    return Err(Error::InvalidArgument(format!(
+                        "Permission value 0x{:X} exceeds platform maximum 0xFFFF",
+                        perm
+                    )));
+                }
                 libarchive2_sys::archive_entry_set_perm(self.entry, perm as u16);
             }
         }
+        Ok(())
     }
 
     /// Set the modification time
+    ///
+    /// # Platform Notes
+    ///
+    /// The underlying time_t type varies by platform:
+    /// - Most Unix/Linux: i64 seconds, i64 nanoseconds
+    /// - Windows: i64 seconds, i32 nanoseconds
+    /// - Android 32-bit: i32 seconds, i32 nanoseconds
     pub fn set_mtime(&mut self, time: SystemTime) {
         if let Ok(duration) = time.duration_since(SystemTime::UNIX_EPOCH) {
             let nsec = duration.subsec_nanos();
@@ -339,6 +550,252 @@ impl EntryMut {
             libarchive2_sys::archive_entry_set_symlink_utf8(self.entry, c_target.as_ptr());
         }
         Ok(())
+    }
+
+    /// Set the hardlink target
+    pub fn set_hardlink(&mut self, target: &str) -> Result<()> {
+        let c_target = CString::new(target).map_err(|_| {
+            Error::InvalidArgument("Hardlink target contains null byte".to_string())
+        })?;
+        unsafe {
+            libarchive2_sys::archive_entry_set_hardlink_utf8(self.entry, c_target.as_ptr());
+        }
+        Ok(())
+    }
+
+    /// Set the access time
+    pub fn set_atime(&mut self, time: SystemTime) {
+        if let Ok(duration) = time.duration_since(SystemTime::UNIX_EPOCH) {
+            let nsec = duration.subsec_nanos();
+            unsafe {
+                #[cfg(all(target_os = "android", any(target_arch = "arm", target_arch = "x86")))]
+                {
+                    libarchive2_sys::archive_entry_set_atime(
+                        self.entry,
+                        duration.as_secs() as i32,
+                        nsec as i32,
+                    );
+                }
+                #[cfg(target_os = "windows")]
+                {
+                    libarchive2_sys::archive_entry_set_atime(
+                        self.entry,
+                        duration.as_secs() as i64,
+                        nsec as i32,
+                    );
+                }
+                #[cfg(not(any(
+                    target_os = "windows",
+                    all(target_os = "android", any(target_arch = "arm", target_arch = "x86"))
+                )))]
+                {
+                    libarchive2_sys::archive_entry_set_atime(
+                        self.entry,
+                        duration.as_secs() as i64,
+                        nsec as i64,
+                    );
+                }
+            }
+        }
+    }
+
+    /// Set the creation time (birth time)
+    pub fn set_birthtime(&mut self, time: SystemTime) {
+        if let Ok(duration) = time.duration_since(SystemTime::UNIX_EPOCH) {
+            let nsec = duration.subsec_nanos();
+            unsafe {
+                #[cfg(all(target_os = "android", any(target_arch = "arm", target_arch = "x86")))]
+                {
+                    libarchive2_sys::archive_entry_set_birthtime(
+                        self.entry,
+                        duration.as_secs() as i32,
+                        nsec as i32,
+                    );
+                }
+                #[cfg(target_os = "windows")]
+                {
+                    libarchive2_sys::archive_entry_set_birthtime(
+                        self.entry,
+                        duration.as_secs() as i64,
+                        nsec as i32,
+                    );
+                }
+                #[cfg(not(any(
+                    target_os = "windows",
+                    all(target_os = "android", any(target_arch = "arm", target_arch = "x86"))
+                )))]
+                {
+                    libarchive2_sys::archive_entry_set_birthtime(
+                        self.entry,
+                        duration.as_secs() as i64,
+                        nsec as i64,
+                    );
+                }
+            }
+        }
+    }
+
+    /// Set the status change time
+    pub fn set_ctime(&mut self, time: SystemTime) {
+        if let Ok(duration) = time.duration_since(SystemTime::UNIX_EPOCH) {
+            let nsec = duration.subsec_nanos();
+            unsafe {
+                #[cfg(all(target_os = "android", any(target_arch = "arm", target_arch = "x86")))]
+                {
+                    libarchive2_sys::archive_entry_set_ctime(
+                        self.entry,
+                        duration.as_secs() as i32,
+                        nsec as i32,
+                    );
+                }
+                #[cfg(target_os = "windows")]
+                {
+                    libarchive2_sys::archive_entry_set_ctime(
+                        self.entry,
+                        duration.as_secs() as i64,
+                        nsec as i32,
+                    );
+                }
+                #[cfg(not(any(
+                    target_os = "windows",
+                    all(target_os = "android", any(target_arch = "arm", target_arch = "x86"))
+                )))]
+                {
+                    libarchive2_sys::archive_entry_set_ctime(
+                        self.entry,
+                        duration.as_secs() as i64,
+                        nsec as i64,
+                    );
+                }
+            }
+        }
+    }
+
+    /// Set the device number
+    ///
+    /// Returns an error if dev > i32::MAX to prevent silent truncation.
+    pub fn set_dev(&mut self, dev: u64) -> Result<()> {
+        if dev > i32::MAX as u64 {
+            return Err(Error::InvalidArgument(format!(
+                "Device number {} exceeds maximum {}",
+                dev,
+                i32::MAX
+            )));
+        }
+        unsafe {
+            libarchive2_sys::archive_entry_set_dev(self.entry, dev as i32);
+        }
+        Ok(())
+    }
+
+    /// Set the device major number
+    ///
+    /// Returns an error if major > i32::MAX to prevent silent truncation.
+    pub fn set_devmajor(&mut self, major: u64) -> Result<()> {
+        if major > i32::MAX as u64 {
+            return Err(Error::InvalidArgument(format!(
+                "Device major number {} exceeds maximum {}",
+                major,
+                i32::MAX
+            )));
+        }
+        unsafe {
+            libarchive2_sys::archive_entry_set_devmajor(self.entry, major as i32);
+        }
+        Ok(())
+    }
+
+    /// Set the device minor number
+    ///
+    /// Returns an error if minor > i32::MAX to prevent silent truncation.
+    pub fn set_devminor(&mut self, minor: u64) -> Result<()> {
+        if minor > i32::MAX as u64 {
+            return Err(Error::InvalidArgument(format!(
+                "Device minor number {} exceeds maximum {}",
+                minor,
+                i32::MAX
+            )));
+        }
+        unsafe {
+            libarchive2_sys::archive_entry_set_devminor(self.entry, minor as i32);
+        }
+        Ok(())
+    }
+
+    /// Set the inode number
+    pub fn set_ino(&mut self, ino: u64) {
+        unsafe {
+            libarchive2_sys::archive_entry_set_ino64(self.entry, ino as i64);
+        }
+    }
+
+    /// Set the number of hard links
+    pub fn set_nlink(&mut self, nlink: u32) {
+        unsafe {
+            libarchive2_sys::archive_entry_set_nlink(self.entry, nlink);
+        }
+    }
+
+    /// Set the device ID
+    ///
+    /// Returns an error if rdev > i32::MAX to prevent silent truncation.
+    pub fn set_rdev(&mut self, rdev: u64) -> Result<()> {
+        if rdev > i32::MAX as u64 {
+            return Err(Error::InvalidArgument(format!(
+                "Device ID {} exceeds maximum {}",
+                rdev,
+                i32::MAX
+            )));
+        }
+        unsafe {
+            libarchive2_sys::archive_entry_set_rdev(self.entry, rdev as i32);
+        }
+        Ok(())
+    }
+
+    /// Set the major device number
+    ///
+    /// Returns an error if major > i32::MAX to prevent silent truncation.
+    pub fn set_rdevmajor(&mut self, major: u64) -> Result<()> {
+        if major > i32::MAX as u64 {
+            return Err(Error::InvalidArgument(format!(
+                "Device major number {} exceeds maximum {}",
+                major,
+                i32::MAX
+            )));
+        }
+        unsafe {
+            libarchive2_sys::archive_entry_set_rdevmajor(self.entry, major as i32);
+        }
+        Ok(())
+    }
+
+    /// Set the minor device number
+    ///
+    /// Returns an error if minor > i32::MAX to prevent silent truncation.
+    pub fn set_rdevminor(&mut self, minor: u64) -> Result<()> {
+        if minor > i32::MAX as u64 {
+            return Err(Error::InvalidArgument(format!(
+                "Device minor number {} exceeds maximum {}",
+                minor,
+                i32::MAX
+            )));
+        }
+        unsafe {
+            libarchive2_sys::archive_entry_set_rdevminor(self.entry, minor as i32);
+        }
+        Ok(())
+    }
+
+    /// Set file flags (BSD-style)
+    pub fn set_fflags(&mut self, set: u64, clear: u64) {
+        unsafe {
+            libarchive2_sys::archive_entry_set_fflags(
+                self.entry,
+                set as std::os::raw::c_ulong,
+                clear as std::os::raw::c_ulong,
+            );
+        }
     }
 
     /// Get an immutable view of this entry
