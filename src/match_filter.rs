@@ -167,7 +167,7 @@ impl ArchiveMatch {
                     self.matcher,
                     libarchive2_sys::ARCHIVE_MATCH_NEWER as i32,
                     sec,
-                    nsec,
+                    nsec as _,
                 ),
                 self.matcher,
             )?;
@@ -197,7 +197,7 @@ impl ArchiveMatch {
                     self.matcher,
                     libarchive2_sys::ARCHIVE_MATCH_OLDER as i32,
                     sec,
-                    nsec,
+                    nsec as _,
                 ),
                 self.matcher,
             )?;
