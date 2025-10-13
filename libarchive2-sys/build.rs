@@ -273,6 +273,16 @@ fn build_libarchive() {
         // Windows - library names are different
         if target.contains("msvc") {
             // MSVC toolchain
+            // Add vcpkg library path if VCPKG_INSTALLATION_ROOT is set
+            if let Ok(vcpkg_root) = env::var("VCPKG_INSTALLATION_ROOT") {
+                let vcpkg_lib = PathBuf::from(vcpkg_root)
+                    .join("installed")
+                    .join("x64-windows")
+                    .join("lib");
+                if vcpkg_lib.exists() {
+                    println!("cargo:rustc-link-search=native={}", vcpkg_lib.display());
+                }
+            }
             println!("cargo:rustc-link-lib=zlib");
             println!("cargo:rustc-link-lib=bz2");
             println!("cargo:rustc-link-lib=lzma");
