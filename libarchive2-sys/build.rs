@@ -177,6 +177,27 @@ fn build_libarchive() {
                 The library requires POSIX types and system calls that are not available in WebAssembly. \
                 Supported platforms: macOS, Windows, Linux, iOS, Android"
         );
+    } else if target.contains("windows") && cfg!(target_os = "windows") {
+        // Native Windows build (not cross-compiling)
+        // Use vcpkg toolchain file if available
+        if let Ok(vcpkg_root) = env::var("VCPKG_INSTALLATION_ROOT") {
+            let toolchain_file = PathBuf::from(&vcpkg_root)
+                .join("scripts/buildsystems/vcpkg.cmake");
+            if toolchain_file.exists() {
+                config.define("CMAKE_TOOLCHAIN_FILE", toolchain_file.to_str().unwrap());
+            }
+        }
+
+        // Full features for Windows
+        config
+            .define("ENABLE_ACL", "ON")
+            .define("ENABLE_XATTR", "ON")
+            .define("ENABLE_ZLIB", "ON")
+            .define("ENABLE_BZip2", "ON")
+            .define("ENABLE_LZMA", "ON")
+            .define("ENABLE_ZSTD", "ON")
+            .define("ENABLE_LZ4", "ON")
+            .define("ENABLE_OPENSSL", "ON");
     } else {
         // Full features for native platforms (macOS native, iOS, etc.)
         config
