@@ -76,7 +76,7 @@ fn test_sparse_file_multiple_small_blocks() {
     let archive_path = temp_dir.path().join("sparse_multi.tar");
 
     let file_size = 10000;
-    let data_chunks = vec![
+    let data_chunks = [
         (0, b"block1".to_vec()),
         (1000, b"block2".to_vec()),
         (5000, b"block3".to_vec()),

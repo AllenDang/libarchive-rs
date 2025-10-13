@@ -672,20 +672,10 @@ impl EntryMut {
     }
 
     /// Set the device number
-    ///
-    /// Returns an error if dev > i32::MAX to prevent silent truncation.
-    pub fn set_dev(&mut self, dev: u64) -> Result<()> {
-        if dev > i32::MAX as u64 {
-            return Err(Error::InvalidArgument(format!(
-                "Device number {} exceeds maximum {}",
-                dev,
-                i32::MAX
-            )));
-        }
+    pub fn set_dev(&mut self, dev: u64) {
         unsafe {
-            libarchive2_sys::archive_entry_set_dev(self.entry, dev as i32);
+            libarchive2_sys::archive_entry_set_dev(self.entry, dev as _);
         }
-        Ok(())
     }
 
     /// Set the device major number
