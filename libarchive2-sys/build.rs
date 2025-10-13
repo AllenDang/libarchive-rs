@@ -196,11 +196,31 @@ fn build_libarchive() {
 
     // The static library is in the build directory, not the install directory
     let build_dir = out_dir.join("build");
-    println!(
-        "cargo:rustc-link-search=native={}/libarchive",
-        build_dir.display()
-    );
-    println!("cargo:rustc-link-lib=static=archive");
+
+    // On Windows MSVC, the library might be in Debug or Release subdirectory
+    if target.contains("windows") && target.contains("msvc") {
+        // Try both Debug and Release configurations
+        println!(
+            "cargo:rustc-link-search=native={}/libarchive/Debug",
+            build_dir.display()
+        );
+        println!(
+            "cargo:rustc-link-search=native={}/libarchive/Release",
+            build_dir.display()
+        );
+        println!(
+            "cargo:rustc-link-search=native={}/libarchive",
+            build_dir.display()
+        );
+        // On Windows, the static library is named archive_static.lib
+        println!("cargo:rustc-link-lib=static=archive_static");
+    } else {
+        println!(
+            "cargo:rustc-link-search=native={}/libarchive",
+            build_dir.display()
+        );
+        println!("cargo:rustc-link-lib=static=archive");
+    }
 
     // Link system libraries that libarchive depends on
     let target = env::var("TARGET").unwrap();
