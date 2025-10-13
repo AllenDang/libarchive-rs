@@ -192,14 +192,16 @@ fn build_libarchive() {
     // Only build the archive_static target to avoid installation issues
     config.build_target("archive_static");
 
-    let _dst = config.build();
+    let dst = config.build();
 
-    // The static library is in the build directory, not the install directory
+    // The cmake crate returns the installation directory, but we want the build directory
+    // The library is in OUT_DIR/build/libarchive
     let build_dir = out_dir.join("build");
 
     // On Windows MSVC, the library might be in Debug or Release subdirectory
     if target.contains("windows") && target.contains("msvc") {
-        // Try both Debug and Release configurations
+        // On Windows MSVC, CMake builds to configuration-specific directories
+        // The library file is named "archive.lib" not "archive_static.lib"
         println!(
             "cargo:rustc-link-search=native={}/libarchive/Debug",
             build_dir.display()
@@ -212,8 +214,8 @@ fn build_libarchive() {
             "cargo:rustc-link-search=native={}/libarchive",
             build_dir.display()
         );
-        // On Windows, the static library is named archive_static.lib
-        println!("cargo:rustc-link-lib=static=archive_static");
+        // The actual library name from CMake is "archive.lib"
+        println!("cargo:rustc-link-lib=static=archive");
     } else {
         println!(
             "cargo:rustc-link-search=native={}/libarchive",
@@ -264,9 +266,9 @@ fn build_libarchive() {
         println!("cargo:rustc-link-lib=zstd");
         println!("cargo:rustc-link-lib=lz4");
         // Additional libraries for Linux features
-        println!("cargo:rustc-link-lib=xml2");      // For XAR format support
-        println!("cargo:rustc-link-lib=crypto");    // For encryption support (OpenSSL)
-        println!("cargo:rustc-link-lib=acl");       // For POSIX ACL support
+        println!("cargo:rustc-link-lib=xml2"); // For XAR format support
+        println!("cargo:rustc-link-lib=crypto"); // For encryption support (OpenSSL)
+        println!("cargo:rustc-link-lib=acl"); // For POSIX ACL support
     } else if target.contains("windows") {
         // Windows - library names are different
         if target.contains("msvc") {
