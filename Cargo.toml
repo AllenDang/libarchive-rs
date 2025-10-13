@@ -2,6 +2,14 @@
 name = "libarchive2"
 version = "0.1.0"
 edition = "2024"
+description = "Safe Rust bindings for libarchive v3.8.1, providing cross-platform archive reading and writing capabilities"
+license = "BSD-2-Clause"
+repository = "https://github.com/AllenDang/libarchive-rs"
+documentation = "https://docs.rs/libarchive2"
+homepage = "https://github.com/AllenDang/libarchive-rs"
+keywords = ["archive", "compression", "tar", "zip", "libarchive"]
+categories = ["compression", "filesystem", "encoding"]
+readme = "README.md"
 
 [dependencies]
 libarchive2-sys = { path = "libarchive2-sys" }
