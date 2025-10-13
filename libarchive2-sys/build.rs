@@ -192,7 +192,7 @@ fn build_libarchive() {
     // Only build the archive_static target to avoid installation issues
     config.build_target("archive_static");
 
-    let dst = config.build();
+    let _ = config.build();
 
     // The cmake crate returns the installation directory, but we want the build directory
     // The library is in OUT_DIR/build/libarchive
@@ -288,7 +288,8 @@ fn build_libarchive() {
             println!("cargo:rustc-link-lib=lzma");
             println!("cargo:rustc-link-lib=zstd");
             println!("cargo:rustc-link-lib=lz4");
-            println!("cargo:rustc-link-lib=bcrypt"); // For crypto functions
+            println!("cargo:rustc-link-lib=libcrypto"); // OpenSSL libcrypto for digest functions
+            println!("cargo:rustc-link-lib=bcrypt"); // For additional crypto functions
             println!("cargo:rustc-link-lib=advapi32");
         } else {
             // MinGW toolchain
@@ -297,6 +298,7 @@ fn build_libarchive() {
             println!("cargo:rustc-link-lib=lzma");
             println!("cargo:rustc-link-lib=zstd");
             println!("cargo:rustc-link-lib=lz4");
+            println!("cargo:rustc-link-lib=crypto"); // OpenSSL libcrypto for digest functions
             println!("cargo:rustc-link-lib=bcrypt");
             println!("cargo:rustc-link-lib=advapi32");
         }
