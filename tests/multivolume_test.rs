@@ -379,3 +379,76 @@ fn test_multivolume_path_validation_with_real_files() {
     // Should handle gracefully
     let _ = result3;
 }
+
+#[test]
+fn test_open_filenames_with_passphrase_empty_list() {
+    let paths: Vec<PathBuf> = vec![];
+    let result = ReadArchive::open_filenames_with_passphrase(&paths, "password");
+
+    // Empty list should return an error
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert!(e.to_string().contains("At least one file path"));
+    }
+}
+
+#[test]
+fn test_open_filenames_with_passphrase_nonexistent_files() {
+    let paths = vec!["nonexistent1.rar", "nonexistent2.rar"];
+    let result = ReadArchive::open_filenames_with_passphrase(&paths, "password");
+
+    // Should fail because files don't exist
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_open_filenames_with_passphrase_null_in_password() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // Create dummy files
+    let file1 = temp_dir.path().join("test1.dat");
+    let file2 = temp_dir.path().join("test2.dat");
+
+    fs::write(&file1, b"dummy").unwrap();
+    fs::write(&file2, b"dummy").unwrap();
+
+    let paths = vec![&file1, &file2];
+
+    // Password with null byte should be rejected
+    let result = ReadArchive::open_filenames_with_passphrase(&paths, "pass\0word");
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert!(e.to_string().contains("null byte"));
+    }
+}
+
+#[test]
+fn test_open_filenames_with_passphrase_api() {
+    // This test verifies that the API signature works correctly
+    // and that the method can be called with various path types
+
+    let temp_dir = TempDir::new().unwrap();
+
+    // Create dummy archive files
+    let file1 = temp_dir.path().join("encrypted.part1");
+    let file2 = temp_dir.path().join("encrypted.part2");
+
+    fs::write(&file1, b"dummy").unwrap();
+    fs::write(&file2, b"dummy").unwrap();
+
+    // Test 1: With PathBuf references
+    let paths = vec![&file1, &file2];
+    let result = ReadArchive::open_filenames_with_passphrase(&paths, "my_password");
+    assert!(result.is_err()); // Not real archives
+
+    // Test 2: With string slices
+    let paths_str = vec![file1.to_str().unwrap(), file2.to_str().unwrap()];
+    let result2 = ReadArchive::open_filenames_with_passphrase(&paths_str, "my_password");
+    assert!(result2.is_err()); // Not real archives
+
+    // Test 3: With PathBuf values
+    let paths_owned = vec![file1.clone(), file2.clone()];
+    let result3 = ReadArchive::open_filenames_with_passphrase(&paths_owned, "my_password");
+    assert!(result3.is_err()); // Not real archives
+}

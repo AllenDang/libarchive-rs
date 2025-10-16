@@ -143,6 +143,83 @@ impl<'a> ReadArchive<'a> {
         Ok(reader)
     }
 
+    /// Open an encrypted multi-volume archive from multiple files with a passphrase
+    ///
+    /// This method combines multi-volume archive support with password protection,
+    /// allowing you to read encrypted archives that are split across multiple files.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use libarchive2::ReadArchive;
+    ///
+    /// // Read an encrypted multi-volume RAR archive
+    /// let parts = vec!["secret.part1.rar", "secret.part2.rar", "secret.part3.rar"];
+    /// let mut archive = ReadArchive::open_filenames_with_passphrase(&parts, "my_password")?;
+    ///
+    /// while let Some(entry) = archive.next_entry()? {
+    ///     println!("Entry: {}", entry.pathname().unwrap_or_default());
+    ///     // Process entry...
+    /// }
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    ///
+    /// # Notes
+    ///
+    /// - The files must be provided in the correct order
+    /// - All files must remain accessible for the lifetime of the ReadArchive
+    /// - This is commonly used for encrypted RAR archives split into multiple parts
+    /// - You can call `add_passphrase()` multiple times before opening to try multiple passwords
+    pub fn open_filenames_with_passphrase<P: AsRef<Path>>(
+        paths: &[P],
+        passphrase: &str,
+    ) -> Result<Self> {
+        // Validate that at least one path is provided
+        if paths.is_empty() {
+            return Err(Error::InvalidArgument(
+                "At least one file path must be provided".to_string(),
+            ));
+        }
+
+        let mut reader = Self::new()?;
+        reader.support_filter_all()?;
+        reader.support_format_all()?;
+
+        // Add passphrase before opening the archive
+        reader.add_passphrase(passphrase)?;
+
+        // Convert paths to C strings and collect them
+        let c_paths: Result<Vec<CString>> = paths
+            .iter()
+            .map(|p| {
+                let path_str = p.as_ref().to_str().ok_or_else(|| {
+                    Error::InvalidArgument("Path contains invalid UTF-8".to_string())
+                })?;
+                CString::new(path_str)
+                    .map_err(|_| Error::InvalidArgument("Path contains null byte".to_string()))
+            })
+            .collect();
+        let c_paths = c_paths?;
+
+        // Create null-terminated array of pointers
+        let mut c_path_ptrs: Vec<*const std::os::raw::c_char> =
+            c_paths.iter().map(|s| s.as_ptr()).collect();
+        c_path_ptrs.push(std::ptr::null()); // Null terminator
+
+        unsafe {
+            Error::from_return_code(
+                libarchive2_sys::archive_read_open_filenames(
+                    reader.archive,
+                    c_path_ptrs.as_mut_ptr(),
+                    10240,
+                ),
+                reader.archive,
+            )?;
+        }
+
+        Ok(reader)
+    }
+
     /// Open an archive from memory
     ///
     /// The data must remain valid for the lifetime of the ReadArchive.
