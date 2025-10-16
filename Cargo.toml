@@ -16,7 +16,7 @@ categories = ["compression", "filesystem", "encoding"]
 readme = "README.md"
 
 [dependencies]
-libarchive2-sys = { version = "0.1.0", path = "libarchive2-sys" }
+libarchive2-sys = { version = "0.2.0", path = "libarchive2-sys" }
 
 [dev-dependencies]
 tempfile = "3.8"
