@@ -281,6 +281,7 @@ fn build_libarchive() {
     } else if target.contains("linux") {
         // Linux
         println!("cargo:rustc-link-lib=pthread");
+        println!("cargo:rustc-link-lib=b2");
         println!("cargo:rustc-link-lib=z");
         println!("cargo:rustc-link-lib=bz2");
         println!("cargo:rustc-link-lib=lzma");
