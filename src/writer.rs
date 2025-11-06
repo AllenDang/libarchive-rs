@@ -744,6 +744,9 @@ impl<'a> WriteArchive<'a> {
 
     /// Write an entry header
     pub fn write_header(&mut self, entry: &EntryMut) -> Result<()> {
+        // Set locale to UTF-8 on Windows to handle non-ASCII filenames correctly
+        let _guard = crate::locale::WindowsUTF8LocaleGuard::new();
+
         unsafe {
             Error::from_return_code(
                 libarchive2_sys::archive_write_header(self.archive, entry.entry),

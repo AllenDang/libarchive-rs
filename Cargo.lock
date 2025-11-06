@@ -145,9 +145,10 @@ dependencies = [
 
 [[package]]
 name = "libarchive2"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "libarchive2-sys",
+ "libc",
  "tempfile",
 ]
 

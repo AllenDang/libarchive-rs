@@ -619,6 +619,9 @@ impl<'a> ReadArchive<'a> {
     ///
     /// Returns `None` when there are no more entries
     pub fn next_entry(&mut self) -> Result<Option<Entry<'_>>> {
+        // Set locale to UTF-8 to handle non-ASCII filenames correctly
+        let _guard = crate::locale::UTF8LocaleGuard::new();
+
         unsafe {
             let mut entry: *mut libarchive2_sys::archive_entry = ptr::null_mut();
             let ret = libarchive2_sys::archive_read_next_header(self.archive, &mut entry);

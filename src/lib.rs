@@ -42,6 +42,7 @@ mod entry;
 mod error;
 mod extract;
 mod format;
+mod locale;
 mod match_filter;
 mod read_disk;
 mod reader;
