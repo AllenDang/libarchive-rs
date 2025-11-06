@@ -52,7 +52,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxml2-dev libssl-dev libacl1-dev liblzma-dev libzstd-dev liblz4-dev libbz2-dev zlib1g-dev e2fslibs-dev cmake
+          sudo apt-get install -y libxml2-dev libssl-dev libacl1-dev liblzma-dev libzstd-dev liblz4-dev libbz2-dev zlib1g-dev libb2-dev e2fslibs-dev cmake
 
       # Install libarchive on macOS
       - name: Install libarchive (macOS)
@@ -123,7 +123,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxml2-dev libssl-dev libacl1-dev liblzma-dev libzstd-dev liblz4-dev libbz2-dev zlib1g-dev e2fslibs-dev cmake
+          sudo apt-get install -y libxml2-dev libssl-dev libacl1-dev liblzma-dev libzstd-dev liblz4-dev libbz2-dev zlib1g-dev libb2-dev e2fslibs-dev cmake
 
       # Install libarchive on macOS
       - name: Install libarchive (macOS)
@@ -184,7 +184,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxml2-dev libssl-dev libacl1-dev liblzma-dev libzstd-dev liblz4-dev libbz2-dev zlib1g-dev e2fslibs-dev cmake
+          sudo apt-get install -y libxml2-dev libssl-dev libacl1-dev liblzma-dev libzstd-dev liblz4-dev libbz2-dev zlib1g-dev libb2-dev e2fslibs-dev cmake
 
       # Install libarchive on macOS
       - name: Install libarchive (macOS)
@@ -239,7 +239,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxml2-dev libssl-dev libacl1-dev liblzma-dev libzstd-dev liblz4-dev libbz2-dev zlib1g-dev e2fslibs-dev cmake
+          sudo apt-get install -y libxml2-dev libssl-dev libacl1-dev liblzma-dev libzstd-dev liblz4-dev libbz2-dev zlib1g-dev libb2-dev e2fslibs-dev cmake
 
       - name: Check documentation
         run: cargo doc --no-deps --all-features
@@ -282,7 +282,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxml2-dev libssl-dev libacl1-dev liblzma-dev libzstd-dev liblz4-dev libbz2-dev zlib1g-dev e2fslibs-dev cmake
+          sudo apt-get install -y libxml2-dev libssl-dev libacl1-dev liblzma-dev libzstd-dev liblz4-dev libbz2-dev zlib1g-dev libb2-dev e2fslibs-dev cmake
 
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov
