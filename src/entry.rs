@@ -86,13 +86,25 @@ impl<'a> Entry<'a> {
     ///
     /// Returns an owned String to ensure safety, as the underlying C string
     /// may be invalidated when the entry is modified or freed.
+    ///
+    /// This method first tries to get the UTF-8 pathname, but if that fails
+    /// (which can happen with non-ASCII filenames in certain archive formats),
+    /// it falls back to the raw pathname and uses lossy UTF-8 conversion.
     pub fn pathname(&self) -> Option<String> {
         unsafe {
+            // First try the UTF-8 version
             let ptr = libarchive2_sys::archive_entry_pathname_utf8(self.entry);
+            if !ptr.is_null()
+                && let Ok(s) = CStr::from_ptr(ptr).to_str() {
+                    return Some(s.to_owned());
+                }
+
+            // Fall back to the raw pathname with lossy conversion
+            let ptr = libarchive2_sys::archive_entry_pathname(self.entry);
             if ptr.is_null() {
                 None
             } else {
-                CStr::from_ptr(ptr).to_str().ok().map(|s| s.to_owned())
+                Some(CStr::from_ptr(ptr).to_string_lossy().into_owned())
             }
         }
     }
@@ -156,11 +168,19 @@ impl<'a> Entry<'a> {
     /// may be invalidated when the entry is modified or freed.
     pub fn uname(&self) -> Option<String> {
         unsafe {
+            // First try the UTF-8 version
             let ptr = libarchive2_sys::archive_entry_uname_utf8(self.entry);
+            if !ptr.is_null()
+                && let Ok(s) = CStr::from_ptr(ptr).to_str() {
+                    return Some(s.to_owned());
+                }
+
+            // Fall back to the raw uname with lossy conversion
+            let ptr = libarchive2_sys::archive_entry_uname(self.entry);
             if ptr.is_null() {
                 None
             } else {
-                CStr::from_ptr(ptr).to_str().ok().map(|s| s.to_owned())
+                Some(CStr::from_ptr(ptr).to_string_lossy().into_owned())
             }
         }
     }
@@ -171,11 +191,19 @@ impl<'a> Entry<'a> {
     /// may be invalidated when the entry is modified or freed.
     pub fn gname(&self) -> Option<String> {
         unsafe {
+            // First try the UTF-8 version
             let ptr = libarchive2_sys::archive_entry_gname_utf8(self.entry);
+            if !ptr.is_null()
+                && let Ok(s) = CStr::from_ptr(ptr).to_str() {
+                    return Some(s.to_owned());
+                }
+
+            // Fall back to the raw gname with lossy conversion
+            let ptr = libarchive2_sys::archive_entry_gname(self.entry);
             if ptr.is_null() {
                 None
             } else {
-                CStr::from_ptr(ptr).to_str().ok().map(|s| s.to_owned())
+                Some(CStr::from_ptr(ptr).to_string_lossy().into_owned())
             }
         }
     }
@@ -186,11 +214,19 @@ impl<'a> Entry<'a> {
     /// may be invalidated when the entry is modified or freed.
     pub fn symlink(&self) -> Option<String> {
         unsafe {
+            // First try the UTF-8 version
             let ptr = libarchive2_sys::archive_entry_symlink_utf8(self.entry);
+            if !ptr.is_null()
+                && let Ok(s) = CStr::from_ptr(ptr).to_str() {
+                    return Some(s.to_owned());
+                }
+
+            // Fall back to the raw symlink with lossy conversion
+            let ptr = libarchive2_sys::archive_entry_symlink(self.entry);
             if ptr.is_null() {
                 None
             } else {
-                CStr::from_ptr(ptr).to_str().ok().map(|s| s.to_owned())
+                Some(CStr::from_ptr(ptr).to_string_lossy().into_owned())
             }
         }
     }
@@ -201,11 +237,19 @@ impl<'a> Entry<'a> {
     /// may be invalidated when the entry is modified or freed.
     pub fn hardlink(&self) -> Option<String> {
         unsafe {
+            // First try the UTF-8 version
             let ptr = libarchive2_sys::archive_entry_hardlink_utf8(self.entry);
+            if !ptr.is_null()
+                && let Ok(s) = CStr::from_ptr(ptr).to_str() {
+                    return Some(s.to_owned());
+                }
+
+            // Fall back to the raw hardlink with lossy conversion
+            let ptr = libarchive2_sys::archive_entry_hardlink(self.entry);
             if ptr.is_null() {
                 None
             } else {
-                CStr::from_ptr(ptr).to_str().ok().map(|s| s.to_owned())
+                Some(CStr::from_ptr(ptr).to_string_lossy().into_owned())
             }
         }
     }
