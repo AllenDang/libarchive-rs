@@ -95,9 +95,10 @@ impl<'a> Entry<'a> {
             // First try the UTF-8 version
             let ptr = libarchive2_sys::archive_entry_pathname_utf8(self.entry);
             if !ptr.is_null()
-                && let Ok(s) = CStr::from_ptr(ptr).to_str() {
-                    return Some(s.to_owned());
-                }
+                && let Ok(s) = CStr::from_ptr(ptr).to_str()
+            {
+                return Some(s.to_owned());
+            }
 
             // Fall back to the raw pathname with lossy conversion
             let ptr = libarchive2_sys::archive_entry_pathname(self.entry);
@@ -171,9 +172,10 @@ impl<'a> Entry<'a> {
             // First try the UTF-8 version
             let ptr = libarchive2_sys::archive_entry_uname_utf8(self.entry);
             if !ptr.is_null()
-                && let Ok(s) = CStr::from_ptr(ptr).to_str() {
-                    return Some(s.to_owned());
-                }
+                && let Ok(s) = CStr::from_ptr(ptr).to_str()
+            {
+                return Some(s.to_owned());
+            }
 
             // Fall back to the raw uname with lossy conversion
             let ptr = libarchive2_sys::archive_entry_uname(self.entry);
@@ -194,9 +196,10 @@ impl<'a> Entry<'a> {
             // First try the UTF-8 version
             let ptr = libarchive2_sys::archive_entry_gname_utf8(self.entry);
             if !ptr.is_null()
-                && let Ok(s) = CStr::from_ptr(ptr).to_str() {
-                    return Some(s.to_owned());
-                }
+                && let Ok(s) = CStr::from_ptr(ptr).to_str()
+            {
+                return Some(s.to_owned());
+            }
 
             // Fall back to the raw gname with lossy conversion
             let ptr = libarchive2_sys::archive_entry_gname(self.entry);
@@ -217,9 +220,10 @@ impl<'a> Entry<'a> {
             // First try the UTF-8 version
             let ptr = libarchive2_sys::archive_entry_symlink_utf8(self.entry);
             if !ptr.is_null()
-                && let Ok(s) = CStr::from_ptr(ptr).to_str() {
-                    return Some(s.to_owned());
-                }
+                && let Ok(s) = CStr::from_ptr(ptr).to_str()
+            {
+                return Some(s.to_owned());
+            }
 
             // Fall back to the raw symlink with lossy conversion
             let ptr = libarchive2_sys::archive_entry_symlink(self.entry);
@@ -240,9 +244,10 @@ impl<'a> Entry<'a> {
             // First try the UTF-8 version
             let ptr = libarchive2_sys::archive_entry_hardlink_utf8(self.entry);
             if !ptr.is_null()
-                && let Ok(s) = CStr::from_ptr(ptr).to_str() {
-                    return Some(s.to_owned());
-                }
+                && let Ok(s) = CStr::from_ptr(ptr).to_str()
+            {
+                return Some(s.to_owned());
+            }
 
             // Fall back to the raw hardlink with lossy conversion
             let ptr = libarchive2_sys::archive_entry_hardlink(self.entry);
