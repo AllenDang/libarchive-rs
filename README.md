@@ -64,14 +64,14 @@ cargo build
 
 ```bash
 sudo apt-get install build-essential cmake pkg-config \
-    zlib1g-dev libbz2-dev liblzma-dev libzstd-dev liblz4-dev
+    zlib1g-dev libbz2-dev liblzma-dev libzstd-dev liblz4-dev libb2-dev
 ```
 
 **Native Build Prerequisites (Fedora/RHEL):**
 
 ```bash
 sudo dnf install gcc-c++ cmake pkgconf \
-    zlib-devel bzip2-devel xz-devel libzstd-devel lz4-devel
+    zlib-devel bzip2-devel xz-devel libzstd-devel lz4-devel libb2-devel
 ```
 
 **Native Build:**
