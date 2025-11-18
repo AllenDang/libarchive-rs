@@ -73,7 +73,7 @@ mod inner {
 
 #[cfg(windows)]
 mod inner {
-    extern "C" {
+    unsafe extern "C" {
         fn _configthreadlocale(arg1: std::os::raw::c_int) -> std::os::raw::c_int;
     }
     const _ENABLE_PER_THREAD_LOCALE: std::os::raw::c_int = 1;
