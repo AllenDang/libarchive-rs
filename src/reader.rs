@@ -50,6 +50,11 @@ impl<'a> ReadArchive<'a> {
         }
     }
 
+    /// Get the raw archive pointer (for internal use by sibling modules)
+    pub(crate) fn archive(&self) -> *mut libarchive2_sys::archive {
+        self.archive
+    }
+
     /// Open an archive file for reading
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
         let mut reader = Self::new()?;

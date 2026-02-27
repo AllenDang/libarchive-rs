@@ -44,6 +44,9 @@ mod extract;
 mod format;
 mod locale;
 mod match_filter;
+/// macOS .pkg Payload (pbzx) decompression and compression
+pub mod pbzx;
+mod pkg;
 mod read_disk;
 mod reader;
 mod writer;
@@ -60,6 +63,7 @@ pub use format::{
     ZipCompressionMethod,
 };
 pub use match_filter::ArchiveMatch;
+pub use pkg::{PkgReader, PkgWriter};
 pub use read_disk::{ReadDisk, ReadDiskFlags, SymlinkMode};
 pub use reader::ReadArchive;
 pub use writer::WriteArchive;

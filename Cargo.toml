@@ -18,6 +18,7 @@ readme = "README.md"
 [dependencies]
 libarchive2-sys = { version = "0.2.0", path = "libarchive2-sys" }
 libc = "0.2"
+lzma-rs = "0.3"
 
 [dev-dependencies]
 tempfile = "3.8"
