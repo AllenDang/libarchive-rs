@@ -475,9 +475,21 @@ impl<'a> WriteArchive<'a> {
                         self.archive,
                     )?;
                 }
-                ArchiveFormat::Cpio => {
+                ArchiveFormat::Cpio | ArchiveFormat::CpioOdc => {
                     Error::from_return_code(
                         libarchive2_sys::archive_write_set_format_cpio(self.archive),
+                        self.archive,
+                    )?;
+                }
+                ArchiveFormat::CpioNewc => {
+                    Error::from_return_code(
+                        libarchive2_sys::archive_write_set_format_cpio_newc(self.archive),
+                        self.archive,
+                    )?;
+                }
+                ArchiveFormat::CpioBin => {
+                    Error::from_return_code(
+                        libarchive2_sys::archive_write_set_format_cpio_bin(self.archive),
                         self.archive,
                     )?;
                 }
@@ -1039,6 +1051,7 @@ impl<'a> WriteArchive<'a> {
         let mut entry = EntryMut::new();
         entry.set_pathname(path)?;
         entry.set_file_type(FileType::Directory);
+        entry.set_size(0);
         entry.set_perm(0o755)?;
         entry.set_mtime(SystemTime::now());
 

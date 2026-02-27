@@ -19,8 +19,14 @@ pub enum ArchiveFormat {
     SevenZip,
     /// AR (Unix archive) format
     Ar,
-    /// CPIO format
+    /// CPIO format (POSIX.1 odc, the default)
     Cpio,
+    /// CPIO SVR4/GNU newc format
+    CpioNewc,
+    /// CPIO old character (POSIX.1 odc) format — same as [`Cpio`](Self::Cpio) but explicit
+    CpioOdc,
+    /// CPIO old binary format
+    CpioBin,
     /// ISO 9660 CD-ROM format
     Iso9660,
     /// XAR format
@@ -85,6 +91,9 @@ impl ArchiveFormat {
             ArchiveFormat::SevenZip => "7z",
             ArchiveFormat::Ar => "ar",
             ArchiveFormat::Cpio => "cpio",
+            ArchiveFormat::CpioNewc => "cpio",
+            ArchiveFormat::CpioOdc => "cpio",
+            ArchiveFormat::CpioBin => "cpio",
             ArchiveFormat::Iso9660 => "iso",
             ArchiveFormat::Xar => "xar",
             ArchiveFormat::Mtree => "mtree",

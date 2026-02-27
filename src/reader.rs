@@ -515,7 +515,10 @@ impl<'a> ReadArchive<'a> {
                         ArchiveFormat::Ar => {
                             libarchive2_sys::archive_read_support_format_ar(self.archive)
                         }
-                        ArchiveFormat::Cpio => {
+                        ArchiveFormat::Cpio
+                        | ArchiveFormat::CpioNewc
+                        | ArchiveFormat::CpioOdc
+                        | ArchiveFormat::CpioBin => {
                             libarchive2_sys::archive_read_support_format_cpio(self.archive)
                         }
                         ArchiveFormat::Iso9660 => {
