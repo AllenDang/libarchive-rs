@@ -898,6 +898,35 @@ impl<'a> ReadArchive<'a> {
     }
 }
 
+/// `std::io::Read` implementation for reading data from the current archive entry.
+///
+/// This allows using `ReadArchive` with anything that accepts a `Read` trait object,
+/// such as `io::copy()` or `io::read_to_string()`. You must call
+/// [`next_entry()`](ReadArchive::next_entry) before reading data.
+///
+/// # Examples
+///
+/// ```no_run
+/// use std::io::Read;
+/// use libarchive2::ReadArchive;
+///
+/// let mut archive = ReadArchive::open("archive.tar.gz")?;
+/// while let Some(entry) = archive.next_entry()? {
+///     let name = entry.pathname().unwrap_or_default();
+///     let mut contents = String::new();
+///     archive.read_to_string(&mut contents)?;
+///     println!("{}: {}", name, contents.len());
+/// }
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+impl<'a> std::io::Read for ReadArchive<'a> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.read_data(buf).map_err(|e| {
+            std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
+        })
+    }
+}
+
 impl<'a> Drop for ReadArchive<'a> {
     fn drop(&mut self) {
         unsafe {

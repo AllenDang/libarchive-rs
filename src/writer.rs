@@ -893,6 +893,68 @@ impl<'a> WriteArchive<'a> {
     }
 }
 
+/// `std::io::Write` implementation for writing data to the current archive entry.
+///
+/// This allows using `WriteArchive` with anything that accepts a `Write` trait object,
+/// such as `io::copy()`. You must call [`write_header()`](WriteArchive::write_header)
+/// before writing data.
+///
+/// # Examples
+///
+/// ```no_run
+/// use std::io::Write;
+/// use libarchive2::{WriteArchive, ArchiveFormat, EntryMut, FileType};
+///
+/// let mut archive = WriteArchive::new()
+///     .format(ArchiveFormat::TarPax)
+///     .open_file("output.tar")?;
+///
+/// let mut entry = EntryMut::new();
+/// entry.set_pathname("hello.txt")?;
+/// entry.set_file_type(FileType::RegularFile);
+/// entry.set_size(13);
+/// entry.set_perm(0o644)?;
+/// archive.write_header(&entry)?;
+///
+/// // Use std::io::Write trait
+/// archive.write_all(b"Hello, world!")?;
+///
+/// archive.finish()?;
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+///
+/// ## Composing with other writers
+///
+/// Use [`CallbackWriter`](crate::CallbackWriter) to pipe archive output through
+/// any `std::io::Write` destination (e.g., a compressor, network socket, or buffer):
+///
+/// ```no_run
+/// use libarchive2::{WriteArchive, CallbackWriter, ArchiveFormat};
+///
+/// let output_file = std::fs::File::create("archive.tar")?;
+/// // Could wrap output_file in flate2::write::GzEncoder here for extra compression
+/// let callback = CallbackWriter::new(output_file);
+/// let mut archive = WriteArchive::new()
+///     .format(ArchiveFormat::TarPax)
+///     .open_callback(callback)?;
+///
+/// archive.add_file("file.txt", b"content")?;
+/// archive.finish()?;
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+impl<'a> std::io::Write for WriteArchive<'a> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.write_data(buf).map_err(|e| {
+            std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
+        })
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        // libarchive manages its own buffering; there is no flush operation.
+        Ok(())
+    }
+}
+
 impl<'a> Drop for WriteArchive<'a> {
     fn drop(&mut self) {
         unsafe {
