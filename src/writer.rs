@@ -24,6 +24,11 @@ pub struct WriteArchive<'a> {
     passphrase: Option<String>,
     format_options: Vec<FormatOption>,
     filter_options: Vec<FilterOption>,
+    default_mtime: Option<SystemTime>,
+    default_uid: Option<u64>,
+    default_gid: Option<u64>,
+    default_uname: Option<String>,
+    default_gname: Option<String>,
     _callback_data: Option<(*mut std::ffi::c_void, crate::callbacks::DropFn)>,
     _phantom: std::marker::PhantomData<&'a mut [u8]>,
 }
@@ -54,6 +59,11 @@ impl<'a> WriteArchive<'a> {
             passphrase: None,
             format_options: Vec::new(),
             filter_options: Vec::new(),
+            default_mtime: None,
+            default_uid: None,
+            default_gid: None,
+            default_uname: None,
+            default_gname: None,
             _callback_data: None,
             _phantom: std::marker::PhantomData,
         }
@@ -130,6 +140,81 @@ impl<'a> WriteArchive<'a> {
     /// ```
     pub fn filter_option(mut self, option: FilterOption) -> Self {
         self.filter_options.push(option);
+        self
+    }
+
+    /// Set a default modification time for all entries
+    ///
+    /// When set, every entry written via [`write_header`](Self::write_header),
+    /// [`add_file`](Self::add_file), or [`add_directory`](Self::add_directory) will
+    /// have its mtime overridden with this value.
+    ///
+    /// This is useful for reproducible builds or when the files on disk don't
+    /// have the desired timestamps.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use libarchive2::{WriteArchive, ArchiveFormat};
+    /// use std::time::SystemTime;
+    ///
+    /// let mut archive = WriteArchive::new()
+    ///     .format(ArchiveFormat::TarPax)
+    ///     .default_mtime(SystemTime::UNIX_EPOCH)
+    ///     .open_file("reproducible.tar")?;
+    ///
+    /// // All entries will have mtime = epoch regardless of what's on disk
+    /// archive.add_file("file.txt", b"content")?;
+    /// archive.finish()?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn default_mtime(mut self, mtime: SystemTime) -> Self {
+        self.default_mtime = Some(mtime);
+        self
+    }
+
+    /// Set a default user ID for all entries
+    ///
+    /// When set, every entry written will have its uid overridden with this value.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use libarchive2::{WriteArchive, ArchiveFormat};
+    ///
+    /// let mut archive = WriteArchive::new()
+    ///     .format(ArchiveFormat::TarPax)
+    ///     .default_uid(0)
+    ///     .default_gid(0)
+    ///     .open_file("root-owned.tar")?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn default_uid(mut self, uid: u64) -> Self {
+        self.default_uid = Some(uid);
+        self
+    }
+
+    /// Set a default group ID for all entries
+    ///
+    /// When set, every entry written will have its gid overridden with this value.
+    pub fn default_gid(mut self, gid: u64) -> Self {
+        self.default_gid = Some(gid);
+        self
+    }
+
+    /// Set a default user name for all entries
+    ///
+    /// When set, every entry written will have its uname overridden with this value.
+    pub fn default_uname<S: Into<String>>(mut self, uname: S) -> Self {
+        self.default_uname = Some(uname.into());
+        self
+    }
+
+    /// Set a default group name for all entries
+    ///
+    /// When set, every entry written will have its gname overridden with this value.
+    pub fn default_gname<S: Into<String>>(mut self, gname: S) -> Self {
+        self.default_gname = Some(gname.into());
         self
     }
 
@@ -743,17 +828,107 @@ impl<'a> WriteArchive<'a> {
     }
 
     /// Write an entry header
+    ///
+    /// If any default overrides ([`default_mtime`](Self::default_mtime),
+    /// [`default_uid`](Self::default_uid), [`default_gid`](Self::default_gid),
+    /// [`default_uname`](Self::default_uname), [`default_gname`](Self::default_gname))
+    /// are configured, they will be applied to the entry before writing.
     pub fn write_header(&mut self, entry: &EntryMut) -> Result<()> {
         // Set locale to UTF-8 on Windows to handle non-ASCII filenames correctly
         let _guard = crate::locale::WindowsUTF8LocaleGuard::new();
 
-        unsafe {
-            Error::from_return_code(
-                libarchive2_sys::archive_write_header(self.archive, entry.entry),
-                self.archive,
-            )?;
+        if self.has_overrides() {
+            // Clone the entry so we can apply overrides without mutating the caller's entry
+            unsafe {
+                let cloned = libarchive2_sys::archive_entry_clone(entry.entry);
+                if cloned.is_null() {
+                    return Err(Error::NullPointer);
+                }
+                self.apply_overrides(cloned);
+                let ret = libarchive2_sys::archive_write_header(self.archive, cloned);
+                libarchive2_sys::archive_entry_free(cloned);
+                Error::from_return_code(ret, self.archive)?;
+            }
+        } else {
+            unsafe {
+                Error::from_return_code(
+                    libarchive2_sys::archive_write_header(self.archive, entry.entry),
+                    self.archive,
+                )?;
+            }
         }
         Ok(())
+    }
+
+    fn has_overrides(&self) -> bool {
+        self.default_mtime.is_some()
+            || self.default_uid.is_some()
+            || self.default_gid.is_some()
+            || self.default_uname.is_some()
+            || self.default_gname.is_some()
+    }
+
+    /// Apply configured overrides to a raw archive_entry pointer
+    ///
+    /// # Safety
+    /// `entry` must be a valid, non-null `archive_entry` pointer.
+    unsafe fn apply_overrides(&self, entry: *mut libarchive2_sys::archive_entry) {
+        unsafe {
+            if let Some(ref mtime) = self.default_mtime {
+                if let Ok(duration) = mtime.duration_since(SystemTime::UNIX_EPOCH) {
+                    let nsec = duration.subsec_nanos();
+                    #[cfg(all(
+                        target_os = "android",
+                        any(target_arch = "arm", target_arch = "x86")
+                    ))]
+                    {
+                        libarchive2_sys::archive_entry_set_mtime(
+                            entry,
+                            duration.as_secs() as i32,
+                            nsec as i32,
+                        );
+                    }
+                    #[cfg(target_os = "windows")]
+                    {
+                        libarchive2_sys::archive_entry_set_mtime(
+                            entry,
+                            duration.as_secs() as i64,
+                            nsec as i32,
+                        );
+                    }
+                    #[cfg(not(any(
+                        target_os = "windows",
+                        all(
+                            target_os = "android",
+                            any(target_arch = "arm", target_arch = "x86")
+                        )
+                    )))]
+                    {
+                        libarchive2_sys::archive_entry_set_mtime(
+                            entry,
+                            duration.as_secs() as i64,
+                            nsec as i64,
+                        );
+                    }
+                }
+            }
+            if let Some(uid) = self.default_uid {
+                libarchive2_sys::archive_entry_set_uid(entry, uid as i64);
+            }
+            if let Some(gid) = self.default_gid {
+                libarchive2_sys::archive_entry_set_gid(entry, gid as i64);
+            }
+            if let Some(ref uname) = self.default_uname {
+                if let Ok(c_uname) = CString::new(uname.as_str()) {
+                    libarchive2_sys::archive_entry_set_uname_utf8(entry, c_uname.as_ptr());
+                }
+            }
+            if let Some(ref gname) = self.default_gname {
+                if let Ok(c_gname) = CString::new(gname.as_str()) {
+                    libarchive2_sys::archive_entry_set_gname_utf8(entry, c_gname.as_ptr());
+                }
+            }
+        }
     }
 
     /// Write data for the current entry
