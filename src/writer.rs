@@ -29,6 +29,7 @@ pub struct WriteArchive<'a> {
     default_gid: Option<u64>,
     default_uname: Option<String>,
     default_gname: Option<String>,
+    strip_directory_trailing_slash: bool,
     _callback_data: Option<(*mut std::ffi::c_void, crate::callbacks::DropFn)>,
     _phantom: std::marker::PhantomData<&'a mut [u8]>,
 }
@@ -64,6 +65,7 @@ impl<'a> WriteArchive<'a> {
             default_gid: None,
             default_uname: None,
             default_gname: None,
+            strip_directory_trailing_slash: false,
             _callback_data: None,
             _phantom: std::marker::PhantomData,
         }
@@ -215,6 +217,42 @@ impl<'a> WriteArchive<'a> {
     /// When set, every entry written will have its gname overridden with this value.
     pub fn default_gname<S: Into<String>>(mut self, gname: S) -> Self {
         self.default_gname = Some(gname.into());
+        self
+    }
+
+    /// Strip trailing slashes from directory entry pathnames
+    ///
+    /// When enabled, directory entries written via [`write_header`](Self::write_header),
+    /// [`add_file`](Self::add_file), or [`add_directory`](Self::add_directory) will have
+    /// any trailing `/` removed from their pathname.
+    ///
+    /// This is useful for CPIO archives used in macOS `.pkg` Payload files, where
+    /// trailing slashes on directories can cause BOM validation errors.
+    ///
+    /// # Note
+    ///
+    /// For **tar formats** (TarPax, TarGnu, etc.), libarchive unconditionally re-adds
+    /// a trailing `/` to directory entries per the POSIX tar specification. This option
+    /// has no effect on tar directory pathnames. Use a CPIO format instead if you need
+    /// directories without trailing slashes.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use libarchive2::{WriteArchive, ArchiveFormat};
+    ///
+    /// let mut archive = WriteArchive::new()
+    ///     .format(ArchiveFormat::Cpio)
+    ///     .strip_directory_trailing_slash(true)
+    ///     .open_file("payload.cpio")?;
+    ///
+    /// archive.add_directory("usr/local/share/myapp")?;
+    /// archive.finish()?;
+    /// // The entry pathname will be "usr/local/share/myapp" (no trailing slash)
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn strip_directory_trailing_slash(mut self, strip: bool) -> Self {
+        self.strip_directory_trailing_slash = strip;
         self
     }
 
@@ -878,6 +916,7 @@ impl<'a> WriteArchive<'a> {
             || self.default_gid.is_some()
             || self.default_uname.is_some()
             || self.default_gname.is_some()
+            || self.strip_directory_trailing_slash
     }
 
     /// Apply configured overrides to a raw archive_entry pointer
@@ -939,6 +978,27 @@ impl<'a> WriteArchive<'a> {
                 && let Ok(c_gname) = CString::new(gname.as_str())
             {
                 libarchive2_sys::archive_entry_set_gname_utf8(entry, c_gname.as_ptr());
+            }
+            if self.strip_directory_trailing_slash {
+                let filetype =
+                    libarchive2_sys::archive_entry_filetype(entry) as u32;
+                const S_IFDIR: u32 = 0o040000;
+                const S_IFMT: u32 = 0o170000;
+                if filetype & S_IFMT == S_IFDIR {
+                    let ptr = libarchive2_sys::archive_entry_pathname_utf8(entry);
+                    if !ptr.is_null() {
+                        let path = std::ffi::CStr::from_ptr(ptr).to_string_lossy();
+                        let trimmed = path.trim_end_matches('/');
+                        if trimmed.len() < path.len()
+                            && let Ok(c_path) = CString::new(trimmed)
+                        {
+                            libarchive2_sys::archive_entry_set_pathname_utf8(
+                                entry,
+                                c_path.as_ptr(),
+                            );
+                        }
+                    }
+                }
             }
         }
     }
