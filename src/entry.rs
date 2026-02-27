@@ -3,7 +3,12 @@
 use crate::error::{Error, Result};
 use std::ffi::{CStr, CString};
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::SystemTime;
+
+/// Global counter for auto-assigning unique inode numbers to new entries.
+/// Starts at 1 because inode 0 is often treated specially.
+static NEXT_INODE: AtomicU64 = AtomicU64::new(1);
 
 /// File type of an archive entry
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -416,9 +421,15 @@ pub struct EntryMut {
 
 impl EntryMut {
     /// Create a new entry
+    ///
+    /// Each new entry is automatically assigned a unique inode number.
+    /// This prevents CPIO archives from incorrectly treating unrelated
+    /// entries as hard links to each other.
     pub fn new() -> Self {
         unsafe {
             let entry = libarchive2_sys::archive_entry_new();
+            let ino = NEXT_INODE.fetch_add(1, Ordering::Relaxed);
+            libarchive2_sys::archive_entry_set_ino64(entry, ino as i64);
             EntryMut { entry, owned: true }
         }
     }
