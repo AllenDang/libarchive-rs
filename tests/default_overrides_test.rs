@@ -32,7 +32,8 @@ fn test_default_mtime() {
     while let Some(entry) = archive.next_entry().unwrap() {
         let mtime = entry.mtime().unwrap();
         assert_eq!(
-            mtime, fixed_time,
+            mtime,
+            fixed_time,
             "Entry {} should have overridden mtime",
             entry.pathname().unwrap_or_default()
         );

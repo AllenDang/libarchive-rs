@@ -1,8 +1,7 @@
 use std::io::{Read, Write};
 
 use libarchive2::{
-    ArchiveFormat, CallbackWriter, CompressionFormat, EntryMut, FileType, ReadArchive,
-    WriteArchive,
+    ArchiveFormat, CallbackWriter, CompressionFormat, EntryMut, FileType, ReadArchive, WriteArchive,
 };
 
 #[test]
@@ -146,7 +145,9 @@ fn test_callback_writer_composition() {
             .open_callback(callback)
             .unwrap();
 
-        archive.add_file("test.txt", b"callback writer content").unwrap();
+        archive
+            .add_file("test.txt", b"callback writer content")
+            .unwrap();
         archive.finish().unwrap();
     }
 

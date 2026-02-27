@@ -12,9 +12,7 @@ fn roundtrip_cpio_format(format: ArchiveFormat) {
             .unwrap();
 
         archive.add_file("hello.txt", b"Hello, CPIO!").unwrap();
-        archive
-            .add_file("subdir/world.txt", b"World!")
-            .unwrap();
+        archive.add_file("subdir/world.txt", b"World!").unwrap();
         archive.add_directory("emptydir").unwrap();
         archive.finish().unwrap();
     }

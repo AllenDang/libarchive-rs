@@ -120,12 +120,7 @@ pub fn decompress(data: &[u8]) -> Result<Vec<u8>> {
             // XZ-compressed chunk
             let mut decompressed = Vec::new();
             lzma_rs::xz_decompress(&mut Cursor::new(chunk_data), &mut decompressed).map_err(
-                |e| {
-                    Error::InvalidArgument(format!(
-                        "Failed to decompress XZ chunk: {}",
-                        e
-                    ))
-                },
+                |e| Error::InvalidArgument(format!("Failed to decompress XZ chunk: {}", e)),
             )?;
             output.extend_from_slice(&decompressed);
         } else {
@@ -200,9 +195,8 @@ pub fn compress_with_chunk_size(data: &[u8], chunk_size: usize) -> Result<Vec<u8
     // Compress each chunk
     for chunk in data.chunks(chunk_size) {
         let mut compressed = Vec::new();
-        lzma_rs::xz_compress(&mut Cursor::new(chunk), &mut compressed).map_err(|e| {
-            Error::InvalidArgument(format!("Failed to XZ-compress chunk: {}", e))
-        })?;
+        lzma_rs::xz_compress(&mut Cursor::new(chunk), &mut compressed)
+            .map_err(|e| Error::InvalidArgument(format!("Failed to XZ-compress chunk: {}", e)))?;
 
         // Only use compressed data if it's actually smaller
         if compressed.len() < chunk.len() {
@@ -340,7 +334,8 @@ mod tests {
 
     #[test]
     fn test_compress_roundtrip() {
-        let original = b"The quick brown fox jumps over the lazy dog. Repeated data helps compression!";
+        let original =
+            b"The quick brown fox jumps over the lazy dog. Repeated data helps compression!";
         let compressed = compress(original).unwrap();
         assert!(is_pbzx(&compressed));
         let decompressed = decompress(&compressed).unwrap();

@@ -1,4 +1,6 @@
-use libarchive2::{ArchiveFormat, CompressionFormat, EntryMut, FileType, ReadArchive, WriteArchive};
+use libarchive2::{
+    ArchiveFormat, CompressionFormat, EntryMut, FileType, ReadArchive, WriteArchive,
+};
 
 #[test]
 fn test_entries_get_unique_inodes() {

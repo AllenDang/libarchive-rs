@@ -1,4 +1,6 @@
-use libarchive2::{ArchiveFormat, CompressionFormat, EntryMut, FileType, ReadArchive, WriteArchive};
+use libarchive2::{
+    ArchiveFormat, CompressionFormat, EntryMut, FileType, ReadArchive, WriteArchive,
+};
 
 #[test]
 fn test_cpio_strip_trailing_slash() {
@@ -76,7 +78,10 @@ fn test_tar_pax_always_has_trailing_slash_on_directories() {
     let entry = archive.next_entry().unwrap().unwrap();
     let name = entry.pathname().unwrap();
     // Tar writer in libarchive always re-adds the trailing slash
-    assert!(name.ends_with('/'), "tar dirs always get trailing slash: {name}");
+    assert!(
+        name.ends_with('/'),
+        "tar dirs always get trailing slash: {name}"
+    );
 }
 
 #[test]

@@ -10,9 +10,7 @@ fn test_pkg_roundtrip() {
     writer
         .add_file("usr/local/bin/hello", b"#!/bin/sh\necho hello\n")
         .unwrap();
-    writer
-        .add_directory("usr/local/share/myapp")
-        .unwrap();
+    writer.add_directory("usr/local/share/myapp").unwrap();
     writer
         .add_file_with_perm("usr/local/bin/tool", b"binary content", 0o755)
         .unwrap();
@@ -66,9 +64,7 @@ fn test_pkg_symlink() {
 
     let mut writer = PkgWriter::new();
     writer.add_file("usr/bin/tool", b"content").unwrap();
-    writer
-        .add_symlink("usr/bin/tool-link", "tool")
-        .unwrap();
+    writer.add_symlink("usr/bin/tool-link", "tool").unwrap();
     writer.write(&pkg_path).unwrap();
 
     let mut reader = PkgReader::open(&pkg_path).unwrap();

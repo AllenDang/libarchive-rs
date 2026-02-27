@@ -929,10 +929,7 @@ impl<'a> WriteArchive<'a> {
                 && let Ok(duration) = mtime.duration_since(SystemTime::UNIX_EPOCH)
             {
                 let nsec = duration.subsec_nanos();
-                #[cfg(all(
-                    target_os = "android",
-                    any(target_arch = "arm", target_arch = "x86")
-                ))]
+                #[cfg(all(target_os = "android", any(target_arch = "arm", target_arch = "x86")))]
                 {
                     libarchive2_sys::archive_entry_set_mtime(
                         entry,
@@ -950,10 +947,7 @@ impl<'a> WriteArchive<'a> {
                 }
                 #[cfg(not(any(
                     target_os = "windows",
-                    all(
-                        target_os = "android",
-                        any(target_arch = "arm", target_arch = "x86")
-                    )
+                    all(target_os = "android", any(target_arch = "arm", target_arch = "x86"))
                 )))]
                 {
                     libarchive2_sys::archive_entry_set_mtime(
@@ -980,8 +974,7 @@ impl<'a> WriteArchive<'a> {
                 libarchive2_sys::archive_entry_set_gname_utf8(entry, c_gname.as_ptr());
             }
             if self.strip_directory_trailing_slash {
-                let filetype =
-                    libarchive2_sys::archive_entry_filetype(entry) as u32;
+                let filetype = libarchive2_sys::archive_entry_filetype(entry) as u32;
                 const S_IFDIR: u32 = 0o040000;
                 const S_IFMT: u32 = 0o170000;
                 if filetype & S_IFMT == S_IFDIR {
@@ -1192,9 +1185,8 @@ impl<'a> WriteArchive<'a> {
 /// ```
 impl<'a> std::io::Write for WriteArchive<'a> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.write_data(buf).map_err(|e| {
-            std::io::Error::other(e.to_string())
-        })
+        self.write_data(buf)
+            .map_err(|e| std::io::Error::other(e.to_string()))
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
