@@ -874,42 +874,42 @@ impl<'a> WriteArchive<'a> {
     /// `entry` must be a valid, non-null `archive_entry` pointer.
     unsafe fn apply_overrides(&self, entry: *mut libarchive2_sys::archive_entry) {
         unsafe {
-            if let Some(ref mtime) = self.default_mtime {
-                if let Ok(duration) = mtime.duration_since(SystemTime::UNIX_EPOCH) {
-                    let nsec = duration.subsec_nanos();
-                    #[cfg(all(
+            if let Some(ref mtime) = self.default_mtime
+                && let Ok(duration) = mtime.duration_since(SystemTime::UNIX_EPOCH)
+            {
+                let nsec = duration.subsec_nanos();
+                #[cfg(all(
+                    target_os = "android",
+                    any(target_arch = "arm", target_arch = "x86")
+                ))]
+                {
+                    libarchive2_sys::archive_entry_set_mtime(
+                        entry,
+                        duration.as_secs() as i32,
+                        nsec as i32,
+                    );
+                }
+                #[cfg(target_os = "windows")]
+                {
+                    libarchive2_sys::archive_entry_set_mtime(
+                        entry,
+                        duration.as_secs() as i64,
+                        nsec as i32,
+                    );
+                }
+                #[cfg(not(any(
+                    target_os = "windows",
+                    all(
                         target_os = "android",
                         any(target_arch = "arm", target_arch = "x86")
-                    ))]
-                    {
-                        libarchive2_sys::archive_entry_set_mtime(
-                            entry,
-                            duration.as_secs() as i32,
-                            nsec as i32,
-                        );
-                    }
-                    #[cfg(target_os = "windows")]
-                    {
-                        libarchive2_sys::archive_entry_set_mtime(
-                            entry,
-                            duration.as_secs() as i64,
-                            nsec as i32,
-                        );
-                    }
-                    #[cfg(not(any(
-                        target_os = "windows",
-                        all(
-                            target_os = "android",
-                            any(target_arch = "arm", target_arch = "x86")
-                        )
-                    )))]
-                    {
-                        libarchive2_sys::archive_entry_set_mtime(
-                            entry,
-                            duration.as_secs() as i64,
-                            nsec as i64,
-                        );
-                    }
+                    )
+                )))]
+                {
+                    libarchive2_sys::archive_entry_set_mtime(
+                        entry,
+                        duration.as_secs() as i64,
+                        nsec as i64,
+                    );
                 }
             }
             if let Some(uid) = self.default_uid {
@@ -918,15 +918,15 @@ impl<'a> WriteArchive<'a> {
             if let Some(gid) = self.default_gid {
                 libarchive2_sys::archive_entry_set_gid(entry, gid as i64);
             }
-            if let Some(ref uname) = self.default_uname {
-                if let Ok(c_uname) = CString::new(uname.as_str()) {
-                    libarchive2_sys::archive_entry_set_uname_utf8(entry, c_uname.as_ptr());
-                }
+            if let Some(ref uname) = self.default_uname
+                && let Ok(c_uname) = CString::new(uname.as_str())
+            {
+                libarchive2_sys::archive_entry_set_uname_utf8(entry, c_uname.as_ptr());
             }
-            if let Some(ref gname) = self.default_gname {
-                if let Ok(c_gname) = CString::new(gname.as_str()) {
-                    libarchive2_sys::archive_entry_set_gname_utf8(entry, c_gname.as_ptr());
-                }
+            if let Some(ref gname) = self.default_gname
+                && let Ok(c_gname) = CString::new(gname.as_str())
+            {
+                libarchive2_sys::archive_entry_set_gname_utf8(entry, c_gname.as_ptr());
             }
         }
     }
@@ -1120,7 +1120,7 @@ impl<'a> WriteArchive<'a> {
 impl<'a> std::io::Write for WriteArchive<'a> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.write_data(buf).map_err(|e| {
-            std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
+            std::io::Error::other(e.to_string())
         })
     }
 

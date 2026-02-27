@@ -922,7 +922,7 @@ impl<'a> ReadArchive<'a> {
 impl<'a> std::io::Read for ReadArchive<'a> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         self.read_data(buf).map_err(|e| {
-            std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
+            std::io::Error::other(e.to_string())
         })
     }
 }
