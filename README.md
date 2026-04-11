@@ -479,19 +479,6 @@ cargo run --example read_encrypted_archive <archive_file> <password>
 | LZOP        | ✅   | ✅    | LZO-based               |
 | GRZIP       | ✅   | ✅    | Grid-friendly           |
 
-## Safety Guarantees
-
-This crate provides strong memory safety guarantees:
-
-- **No use-after-free**: Lifetimes prevent dangling pointers at compile time
-- **No data races**: `Send` but not `Sync` enforces single-threaded access
-- **No null pointer dereferences**: All null checks before FFI calls
-- **No buffer overflows**: All buffer operations bounds-checked
-- **Proper error handling**: All FFI errors converted to Rust `Result` types
-- **Resource cleanup**: RAII ensures archives are always properly closed
-
-See [COMPREHENSIVE_CODE_REVIEW.md](COMPREHENSIVE_CODE_REVIEW.md) for detailed safety analysis.
-
 ## Performance
 
 Zero-cost abstractions mean this crate has **no runtime overhead** compared to using libarchive directly from C:
