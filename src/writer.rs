@@ -792,6 +792,20 @@ impl<'a> WriteArchive<'a> {
                         ),
                         self.archive,
                     )?;
+                },
+                FormatOption::XarCompressionNone => {
+                    let module = CString::new("xar").unwrap();
+                    let key = CString::new("compression").unwrap();
+                    let val = CString::new("none").unwrap();
+                    Error::from_return_code(
+                        libarchive2_sys::archive_write_set_format_option(
+                            self.archive,
+                            module.as_ptr(),
+                            key.as_ptr(),
+                            val.as_ptr(),
+                        ),
+                        self.archive,
+                    )?;
                 }
             }
             Ok(())

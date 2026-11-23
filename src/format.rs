@@ -201,6 +201,9 @@ pub enum FormatOption {
 
     /// 7z: Set compression level (0-9)
     SevenZipCompressionLevel(CompressionLevel),
+
+    /// XAR: Disable per-entry compression
+    XarCompressionNone,
 }
 
 /// Filter-specific options for compression
